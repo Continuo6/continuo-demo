@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Continuo: Long-Form Speech Dataset</title>
+<meta name="description" content="Continuo: a 229K-hour, 41-language dataset for controllable long-form speech generation, with a 23.3-hour benchmark of recordings up to 30 minutes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&family=Source+Sans+3:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ------------------------------------------------------------------
+   Tokens
+   ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+  --bg:     #FFFFFF;
+  --panel:  #F6F8FA;
+  --tint:   #EEF4FA;
+  --ink:    #1B1F24;
+  --ink-2:  #454E57;
+  --ink-3:  #6E7781;
+  --rule:   #D8DEE4;
+  --staff:  #D0D7DE;
+  --ghost:  #B8C0C8;
+  --link:   #2D6AA6;
+
+  /* Speaker voices: S1 blue and S2 green follow the paper's Figure 1.
+     Validated for CVD separation; every staff also carries a text label. */
+  --s1: #2D6AA6;
+  --s2: #48A06A;
+  --s3: #C27A2C;
+  --s4: #9A5BB0;
+
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans:  "Source Sans 3", "Source Sans Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:  "Source Code Pro", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --wrap: 1080px;
+  --col: 860px;
+  --gutter: 24px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.65;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; border-radius: 4px; }
+b, strong { font-weight: 600; }
+
+.wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 var(--gutter); }
+.col  { max-width: var(--col); margin-left: auto; margin-right: auto; }
+.mono { font-family: var(--mono); font-size: 0.82em; }
+.sc   { font-variant-caps: small-caps; letter-spacing: 0.02em; }
+.just { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
+
+/* ------------------------------------------------------------------
+   Nav
+   ------------------------------------------------------------------ */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid transparent; transition: border-color .3s;
+}
+.nav.is-stuck { border-bottom-color: var(--rule); }
+.nav-inner { display: flex; align-items: center; gap: 24px; height: 54px; }
+.brand { font-weight: 600; font-size: 19px; color: var(--ink); text-decoration: none; }
+.nav-links { display: flex; gap: 22px; margin-left: auto; font-family: var(--sans); font-size: 15px; }
+.nav-links a { color: var(--ink-2); text-decoration: none; }
+.nav-links a:hover { color: var(--ink); }
+
+/* ------------------------------------------------------------------
+   Masthead
+   ------------------------------------------------------------------ */
+.masthead { text-align: center; padding: 56px 0 0; }
+.venue { font-family: var(--sans); font-size: 14px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
+.title {
+  font-weight: 600; font-size: clamp(30px, 4.3vw, 46px); line-height: 1.16; letter-spacing: -0.012em;
+  max-width: 21em; margin: 14px auto 0;
+}
+.authors { font-size: 21px; margin: 26px 0 0; }
+.affil { font-size: 16.5px; color: var(--ink-2); margin: 4px 0 0; font-style: italic; }
+.links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 26px 0 0; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 18px; border-radius: 999px;
+  background: var(--ink); color: #fff; text-decoration: none;
+  font-family: var(--sans); font-size: 15.5px; font-weight: 600;
+  transition: background .2s;
+}
+.btn:hover { background: var(--link); }
+.btn svg { width: 17px; height: 17px; flex: none; }
+.btn .emoji { font-size: 16px; line-height: 1; }
+.btn[data-pending]::after { content: "soon"; font-size: 11.5px; font-weight: 500; opacity: .6; margin-left: -1px; }
+
+/* ------------------------------------------------------------------
+   Sections, figures, captions
+   ------------------------------------------------------------------ */
+.section { padding: 64px 0 0; }
+.h2 { font-size: 30px; font-weight: 600; line-height: 1.2; text-align: center; margin: 0 0 22px; letter-spacing: -0.005em; }
+.h3 { font-size: 20px; font-weight: 600; line-height: 1.3; margin: 0; }
+p { margin: 0 0 16px; }
+
+.fig { margin: 30px 0 34px; }
+.panel { background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; padding: 20px 22px; }
+figcaption { font-size: 15.5px; line-height: 1.55; color: var(--ink-2); margin: 12px 0 0; text-align: left; }
+figcaption b { color: var(--ink); }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 20px; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.panel-head .label { font-family: var(--sans); font-size: 14px; color: var(--ink-3); }
+
+/* Score (Figure 1) */
+.readout { display: flex; gap: 14px; align-items: baseline; }
+.readout-time { font-family: var(--mono); font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.readout-now { font-style: italic; font-size: 17px; color: var(--ink); min-width: 12em; text-align: right; }
+.readout-now b { font-family: var(--mono); font-style: normal; font-weight: 500; font-size: 12.5px; margin-right: 6px; }
+.score-svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
+.is-scrubbable { cursor: ew-resize; }
+.sc-staff { stroke: var(--staff); stroke-width: 1; shape-rendering: crispEdges; }
+.sc-tick { stroke: var(--ghost); stroke-width: 1; shape-rendering: crispEdges; }
+.sc-tick--major { stroke: var(--ink-3); }
+.sc-time { font-family: var(--mono); font-size: 11px; fill: var(--ink-3); }
+.sc-label { font-family: var(--mono); font-size: 12px; font-weight: 500; fill: var(--ink-2); }
+.sc-label.is-active { fill: var(--ink); }
+.sc-dir { font-family: var(--serif); font-style: italic; font-size: 15px; fill: var(--ink); }
+.sc-nv { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-2); }
+.sc-hairpin { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.sc-ghost { fill: var(--ghost); }
+.sc-turn { transition: opacity .2s; }
+.sc-playhead line { stroke: var(--ink); stroke-width: 1.25; }
+.sc-playhead path { fill: var(--ink); }
+
+/* Segmented control */
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--bg); }
+.seg button {
+  appearance: none; border: 0; border-right: 1px solid var(--rule); background: transparent; cursor: pointer;
+  font: 500 14.5px var(--sans); color: var(--ink-2); padding: 7px 14px; transition: background .2s, color .2s;
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { color: var(--ink); background: var(--panel); }
+.seg button[aria-selected="true"] { background: var(--ink); color: #fff; }
+
+/* Three views (Figure 3) */
+.views-grid { display: grid; grid-template-columns: 1fr 250px; gap: 28px; margin-top: 16px; align-items: start; }
+.views-legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 0; font-family: var(--sans); font-size: 13.5px; color: var(--ink-2); }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.vs-bar { transition: opacity .35s ease; }
+.vs-bracket { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.vs-bracket-label { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+.vs-axis { font-family: var(--mono); font-size: 11px; fill: var(--ink-3); }
+.vp-name { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+.vp-rule { font-size: 15px; line-height: 1.5; color: var(--ink-2); margin: 0 0 12px; }
+.vp-stats { margin: 0; font-family: var(--sans); font-size: 14px; }
+.vp-stats div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-top: 1px solid var(--rule); }
+.vp-stats dt { color: var(--ink-2); }
+.vp-stats dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+
+/* Training data preview */
+.pv-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; }
+.pv-head a { font-family: var(--sans); font-size: 14.5px; font-weight: 600; text-decoration: none; }
+.pv-head a[data-pending]::after { content: " (soon)"; font-weight: 400; color: var(--ink-3); }
+.pv-cols, .pv-row { display: grid; grid-template-columns: 170px 1fr 230px; gap: 20px; }
+.pv-cols { font-family: var(--sans); font-size: 14px; font-weight: 600; padding: 8px 4px; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.pv-list {
+  border-bottom: 2px solid var(--ink);
+  max-height: min(640px, 72vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
+  /* scroll shadows: the white covers scroll with the content, the soft shadows stay put */
+  background:
+    linear-gradient(var(--bg) 30%, rgba(255,255,255,0)) top / 100% 28px no-repeat local,
+    linear-gradient(rgba(255,255,255,0), var(--bg) 70%) bottom / 100% 28px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgba(27,31,36,.14), transparent) top / 100% 10px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgba(27,31,36,.14), transparent) bottom / 100% 10px no-repeat scroll;
+}
+.pv-list:focus-visible { outline-offset: -2px; }
+.pv-row { padding: 16px 4px; border-top: 1px solid var(--rule); animation: pv-in .35s ease both; }
+.pv-row:first-child { border-top: 0; }
+@keyframes pv-in { from { opacity: 0; transform: translateY(6px); } }
+.pv-id { font-family: var(--mono); font-size: 11.5px; color: var(--ink); word-break: break-all; }
+.pv-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.pv-chip { font-family: var(--sans); font-size: 12.5px; color: var(--ink-2); background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 0 6px; line-height: 20px; }
+.pv-body .player { max-width: 320px; margin-bottom: 10px; }
+.pv-text { font-size: 15.5px; line-height: 1.6; color: var(--ink); }
+.pv-text.is-clamped { max-height: 4.8em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 60%, transparent); mask-image: linear-gradient(#000 60%, transparent); }
+.pv-turn { display: grid; grid-template-columns: 34px 1fr; gap: 6px; }
+.pv-spk { font-family: var(--mono); font-size: 12px; font-weight: 500; padding-top: 3px; white-space: nowrap; }
+.pv-spk::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c); margin-right: 5px; vertical-align: 1px; }
+.pv-more { appearance: none; border: 0; background: none; padding: 0; margin-top: 4px; cursor: pointer; font: 600 13.5px var(--sans); color: var(--link); }
+.nv { font-family: var(--mono); font-size: 0.8em; font-weight: 500; background: var(--tint); border-radius: 3px; padding: 0 3px; white-space: nowrap; }
+.pv-ann { font-size: 15px; line-height: 1.5; }
+.pv-ann-label { font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.pv-ann i { color: var(--ink); }
+.pv-ann .pv-t { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-right: 6px; }
+.pv-ann div + div { margin-top: 4px; }
+.pv-none { color: var(--ink-3); font-size: 14.5px; }
+.pv-noann .pv-cols, .pv-noann .pv-row { grid-template-columns: 184px 1fr; }
+.pv-noann .pv-cols span:nth-child(3) { display: none; }
+
+/* Results table (booktabs) */
+.tscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.btab { width: 100%; border-collapse: collapse; font-size: 15.5px; font-variant-numeric: lining-nums tabular-nums; }
+.btab caption { caption-side: top; text-align: left; font-size: 15.5px; line-height: 1.55; color: var(--ink-2); padding: 0 0 10px; }
+.btab caption b { color: var(--ink); }
+.btab th, .btab td { padding: 6px 10px; text-align: center; white-space: nowrap; }
+.btab th:first-child, .btab td:first-child { text-align: left; padding-left: 4px; }
+.btab thead tr:first-child th { border-top: 2px solid var(--ink); padding-top: 8px; }
+.btab thead tr:last-child th, .btab thead th[rowspan] { border-bottom: 1px solid var(--ink); }
+.btab th { font-weight: 600; }
+.btab thead .grp { background: linear-gradient(var(--ink-3), var(--ink-3)) bottom center / calc(100% - 14px) 1px no-repeat; }
+.btab thead .sub { font-weight: 500; color: var(--ink-2); font-size: 14.5px; }
+.btab tbody tr:last-child td { border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
+.btab tr.mid td { border-top: 1px solid var(--ink); }
+.btab tr.ours td { background: var(--tint); }
+.btab tr.ours td:first-child { font-weight: 600; }
+.btab tr.ref td { color: var(--ink-3); }
+.btab .best { font-weight: 700; }
+.btab .second { text-decoration: underline; text-underline-offset: 3px; }
+.results-head { display: flex; justify-content: center; margin: 0 0 16px; }
+.results-note { font-size: 15px; color: var(--ink-2); margin: 10px 0 0; }
+
+/* Audio samples */
+.sample-group { margin-top: 36px; }
+.sample-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 10px; }
+.sample-head span { font-family: var(--sans); font-size: 14px; color: var(--ink-3); }
+.atab { width: 100%; border-collapse: collapse; font-size: 15px; }
+.atab th, .atab td { padding-left: 8px; padding-right: 8px; }
+.atab th { font-family: var(--sans); font-weight: 600; font-size: 14px; text-align: left; padding-top: 8px; padding-bottom: 8px; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); white-space: nowrap; }
+.atab td { padding-top: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+.atab tr:last-child td { border-bottom: 2px solid var(--ink); }
+.atab td.txt { min-width: 160px; max-width: 300px; color: var(--ink-2); line-height: 1.5; }
+.atab td.txt i { color: var(--ink); }
+.atab td.aud { min-width: 118px; }
+.player { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; }
+.player button {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--ink); background: var(--bg);
+  display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0;
+}
+.player button:hover:not(:disabled) { background: var(--ink); color: #fff; }
+.player button:disabled { border-color: var(--staff); color: var(--ghost); cursor: not-allowed; }
+.player button svg { width: 11px; height: 11px; }
+.ptrack { height: 4px; border-radius: 2px; background: var(--rule); position: relative; cursor: pointer; }
+.ptrack span { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ink); border-radius: 2px; }
+.player.is-empty .ptrack { cursor: default; background: repeating-linear-gradient(90deg, var(--rule) 0 4px, transparent 4px 7px); }
+.ptime { font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; }
+
+/* BibTeX */
+.cite { position: relative; }
+.cite pre {
+  margin: 0; padding: 20px 22px; border-radius: 8px; background: var(--panel); border: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 13.5px; line-height: 1.65; overflow-x: auto; color: var(--ink);
+}
+.copy {
+  position: absolute; top: 12px; right: 12px; font: 600 13px var(--sans); color: var(--ink);
+  background: var(--bg); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 12px; cursor: pointer;
+}
+.copy:hover { border-color: var(--ink); }
+.footer { margin-top: 72px; padding: 28px 0 44px; border-top: 1px solid var(--rule); text-align: center; font-family: var(--sans); font-size: 14px; color: var(--ink-3); }
+.footer p { margin: 0; }
+
+/* Entrance */
+.rise { opacity: 0; transform: translateY(12px); animation: rise .9s cubic-bezier(.2,.7,.2,1) forwards; }
+.rise-2 { animation-delay: .1s; } .rise-3 { animation-delay: .2s; } .rise-4 { animation-delay: .32s; } .rise-5 { animation-delay: .46s; }
+@keyframes rise { to { opacity: 1; transform: none; } }
+
+/* ------------------------------------------------------------------
+   Responsive
+   ------------------------------------------------------------------ */
+@media (max-width: 960px) {
+  .nav-links { display: none; }
+  .views-grid { grid-template-columns: 1fr; gap: 18px; }
+  .pv-cols { display: none; }
+  .pv-row, .pv-noann .pv-row { grid-template-columns: 1fr; gap: 10px; }
+  .pv-list { border-top: 2px solid var(--ink); }
+}
+@media (max-width: 640px) {
+  :root { --gutter: 16px; }
+  body { font-size: 17px; }
+  .just { text-align: left; }
+  .masthead { padding-top: 40px; }
+  .section { padding-top: 52px; }
+  .h2 { font-size: 26px; }
+  .panel { padding: 14px; }
+  .readout-now { min-width: 0; text-align: left; }
+  .btab { font-size: 14.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .rise { animation: none; opacity: 1; transform: none; }
+  .vs-bar, .sc-turn, .seg button, .btn { transition: none; }
+  .pv-row { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<!--
+  LINKS TO FILL IN: search for data-pending. Replace href="#" with the real URL
+  and delete the data-pending attribute to remove the "soon" label.
+  AUDIO TO FILL IN: see the SAMPLES array near the end of the script.
+-->
+
+<header class="nav" id="top">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top">Continuo</a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#abstract">Abstract</a>
+      <a href="#dataset">Dataset</a>
+      <a href="#preview">Data Preview</a>
+      <a href="#results">Results</a>
+      <!-- <a href="#samples">Samples</a> -->
+      <a href="#bibtex">BibTeX</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ============================================================ MASTHEAD -->
+<header class="masthead">
+  <p class="venue rise">Under review at ICLR 2027</p>
+  <h1 class="title rise rise-2">Continuo: A Large-Scale Dataset for Controllable Long-Form Speech Generation</h1>
+  <p class="authors rise rise-3">Anonymous Authors</p>
+  <p class="affil rise rise-3">Paper under double-blind review</p>
+  <div class="links rise rise-4">
+    <a class="btn" href="#" data-pending>
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      Code
+    </a>
+    <a class="btn" href="#" data-pending><span class="emoji" aria-hidden="true">🤗</span> Dataset</a>
+    <!-- Audio Samples: hidden for now, re-enable together with #samples below
+    <a class="btn" href="#samples">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>
+      Audio Samples
+    </a>
+    -->
+  </div>
+
+  <!-- Teaser: Figure 1 -->
+  <figure class="fig rise rise-5" style="margin-top:40px; text-align:left">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="label">Continuo-Dialogue example · 4 speakers · 30 min, one continuous recording</span>
+        <span class="readout" aria-live="off">
+          <span class="readout-now" id="score-now"></span>
+          <span class="readout-time" id="score-time">0:00 / 30:00</span>
+        </span>
+      </div>
+      <svg class="score-svg is-scrubbable" id="hero-score" role="img" aria-label="Illustrative score of a thirty-minute, four-speaker dialogue. Each staff is one speaker; turns appear as waveforms, with style instructions above and nonverbal tags below."></svg>
+    </div>
+    <figcaption><b>Figure 1.</b> A long-form dialogue drawn as a score (illustrative). Each staff is one speaker and the waveform marks who holds the floor. Italic markings are natural-language style instructions, hairpins mark loudness changes, and bracketed tags are nonverbal vocalizations (NV). Hover to scrub.</figcaption>
+  </figure>
+</header>
+
+<!-- ============================================================ ABSTRACT -->
+<section class="section col" id="abstract">
+  <h2 class="h2">Abstract</h2>
+  <p class="just">
+    Generating minutes-long speech requires models to keep content, speaker identity, turn-taking, and expressive style consistent over time.
+    Yet open training corpora cap examples at tens of seconds to a few minutes, and no open benchmark provides per-speaker reference audio for recordings longer than four minutes.
+    We introduce <span class="sc">Continuo</span>, a 229K-hour multilingual dataset for controllable long-form speech generation.
+    From in-the-wild recordings, <span class="sc">Continuo</span> constructs short utterances, single-speaker long-form speech, and multi-speaker dialogues from shared source recordings, preserving transcripts, speaker identities, pauses, and acoustic transitions across these three views.
+    Examples longer than five minutes account for 50.0% of long-form and 66.8% of dialogue hours.
+    To support expressive control, <span class="sc">Continuo</span> provides natural language style instructions for 4.77M examples and nonverbal-vocalization tags for 933K examples.
+    We also introduce <span class="sc">Continuo</span>-testset, 23.3 hours of bilingual recordings of up to 30 minutes and four speakers, each speaker paired with reference audio.
+    Trained on <span class="sc">Continuo</span>, our 0.6B-backbone non-autoregressive model achieves the lowest Chinese CER and English WER on TTSD-Eval (5.27%/9.93%) among compared systems, while its autoregressive counterpart matches Qwen3-TTS-12Hz-VD on InstructTTSEval (76.2/78.3 vs. 77.1/77.9).
+    Together, these results establish <span class="sc">Continuo</span> as a comprehensive data foundation for long-form and expressively controllable speech generation.
+  </p>
+</section>
+
+<!-- ============================================================= DATASET -->
+<section class="section" id="dataset">
+  <div class="col">
+    <h2 class="h2"><span class="sc">Continuo</span> Dataset</h2>
+    <p class="just"><span class="sc">Continuo</span>-Pipe turns in-the-wild recordings into three views that share the same source audio. Long-form views keep the continuous recording, including native pauses and transitions between speakers, instead of concatenating trimmed clips. Annotated subsets add natural-language style instructions and NV tags placed among the spoken words.</p>
+  </div>
+  <figure class="fig">
+    <div class="panel"><img src="assets/pipeline.png" alt="Continuo-Pipe overview: data construction (speech enhancement, diarization, transcription, merge), additional annotation (instruction and NV annotation), and the three resulting example types." loading="lazy"></div>
+    <figcaption class="col"><b>Figure 2.</b> Overview of <span class="sc">Continuo</span>-Pipe. Recordings are enhanced, diarized, transcribed, and merged; segments are annotated with style instructions and NV tags, then reassembled with speaker and timing information into long-form speech and dialogue examples.</figcaption>
+  </figure>
+  <figure class="fig col">
+    <div class="panel">
+      <div class="seg" role="tablist" aria-label="Dataset view" id="views-tabs">
+        <button role="tab" aria-selected="true" data-view="short">Short utterance</button>
+        <button role="tab" aria-selected="false" data-view="long">Single-speaker long-form</button>
+        <button role="tab" aria-selected="false" data-view="dialogue">Multi-speaker dialogue</button>
+      </div>
+      <div class="views-grid">
+        <div>
+          <svg id="views-svg" class="score-svg" role="img" aria-label="A twelve-minute source recording with two speakers. Brackets mark the examples extracted for the selected view."></svg>
+          <div class="views-legend">
+            <span class="key"><i style="background:var(--s1)"></i>Speaker 1</span>
+            <span class="key"><i style="background:var(--s2)"></i>Speaker 2</span>
+            <span class="key"><svg width="22" height="10" aria-hidden="true"><path d="M1 9V2h20v7" class="vs-bracket"/></svg>Extracted example</span>
+          </div>
+        </div>
+        <div aria-live="polite">
+          <p class="vp-name" id="vp-name"></p>
+          <p class="vp-rule" id="vp-rule"></p>
+          <dl class="vp-stats" id="vp-stats"></dl>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Figure 3.</b> Three views cut from one illustrative 12-minute source recording, with the size of each view in <span class="sc">Continuo</span>. After deduplication, the corpus holds 229,388 hours across 41 languages.</figcaption>
+  </figure>
+  <div class="col">
+    <p class="just"><b><span class="sc">Continuo</span>-testset.</b> 118 human-verified Chinese and English recordings (23.3 h): 42 single-speaker long-form cases and 76 dialogues with 2–4 speakers, up to 30 min each. Every case provides a speaker-attributed script and reference audio for each speaker, and the whole script must be synthesized as a single recording.</p>
+  </div>
+</section>
+
+<!-- ============================================================= PREVIEW -->
+<section class="section col" id="preview">
+  <h2 class="h2">Training Data Preview</h2>
+  <p class="just">Examples from each view of <span class="sc">Continuo</span>, drawn from the training set with test-set recordings excluded. Long-form and dialogue examples are continuous recordings that keep native pauses and turn-taking; dialogue transcripts are speaker-attributed.</p>
+  <div class="pv-head">
+    <div class="seg" role="tablist" aria-label="Training data view" id="pv-tabs">
+      <button role="tab" aria-selected="true" data-view="short">Short</button>
+      <button role="tab" aria-selected="false" data-view="long">Long</button>
+      <button role="tab" aria-selected="false" data-view="dialogue">Dialogue</button>
+    </div>
+    <a href="#" data-pending>Browse the full dataset on 🤗 Hugging Face</a>
+  </div>
+  <div class="pv-cols" aria-hidden="true"><span>Example</span><span>Audio &amp; transcript</span><span>Annotation</span></div>
+  <div class="pv-list" id="pv-list" aria-live="polite" tabindex="0" aria-label="Training data examples (scrollable)"></div>
+</section>
+
+<!-- ============================================================= RESULTS -->
+<section class="section col" id="results">
+  <h2 class="h2">Results</h2>
+  <p class="just">We train two models with a 0.6B backbone on <span class="sc">Continuo</span>: Continuo-AR (autoregressive with flow matching) and Continuo-NAR (masked generative). Both are competitive with much larger systems on long-form dialogue and learn instruction and NV control, which no open-source baseline supports for long-form speech.</p>
+  <div class="results-head"><div class="seg" role="tablist" aria-label="Benchmark" id="bench-tabs"></div></div>
+  <div class="tscroll"><table class="btab" id="bench-table"></table></div>
+  <p class="results-note">Bold and underlining mark the best and second-best generated-speech scores per column. Parameter counts cover the sequence backbone only.</p>
+</section>
+
+<!-- ============================================================= SAMPLES -->
+<!-- Audio Samples: hidden for now. Un-comment this section (and the button + nav link above) to bring it back.
+<section class="section col" id="samples">
+  <h2 class="h2">Audio Samples</h2>
+  <div id="samples-root"></div>
+</section>
+-->
+
+<!-- ============================================================== BIBTEX -->
+<section class="section col" id="bibtex">
+  <h2 class="h2">BibTeX</h2>
+  <div class="cite">
+<pre id="bibtex-text">@inproceedings{continuo2027,
+  title     = {Continuo: A Large-Scale Dataset for Controllable Long-Form Speech Generation},
+  author    = {Anonymous},
+  booktitle = {Submitted to the International Conference on Learning Representations},
+  year      = {2027}
+}</pre>
+    <button class="copy" type="button" id="copy-bib">Copy</button>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p>This page is anonymized for double-blind review.</p>
+  </div>
+</footer>
+
+<script>
+(() => {
+const NS = "http://www.w3.org/2000/svg";
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const VOICES = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
+
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) {
+    if (k === "text") n.textContent = attrs[k];
+    else n.setAttribute(k, attrs[k]);
+  }
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function fmt(sec) {
+  sec = Math.max(0, Math.round(sec));
+  return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+}
+function collides(spans, a, b, pad) { return spans.some(([s, e]) => a < e + pad && b > s - pad); }
+function debounce(fn, ms) { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; }
+function arrowKeys(container, attr, fn) {
+  container.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    const tabs = [...container.querySelectorAll("button")];
+    const i = tabs.findIndex((t) => t.getAttribute("aria-selected") === "true");
+    const n = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+    n.focus(); fn(n.dataset[attr]);
+  });
+}
+
+/* ------------------------------------------------------------------
+   Figure 1: score renderer. Staves = speakers, waveform = turns,
+   directions above the staff, NV tags below.
+   ------------------------------------------------------------------ */
+function renderScore(svg, cfg) {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const W = Math.max(260, svg.clientWidth || svg.parentNode.clientWidth);
+  const narrow = W < 560;
+  const L = narrow ? 30 : 44, R = 6;
+  const plotW = W - L - R;
+  const x = (t) => L + (t / cfg.duration) * plotW;
+
+  const dirBand = 22, staffH = 28, below = 22, gap = 10;
+  const rowH = dirBand + staffH + below + gap;
+  const top = 26;
+  const H = top + cfg.speakers.length * rowH - gap + 2;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("height", H);
+
+  const defs = el("defs", {}, svg);
+  const clipId = svg.id + "-clip";
+  const clip = el("clipPath", { id: clipId }, defs);
+  const clipRect = el("rect", { x: 0, y: 0, width: L, height: H }, clip);
+
+  // Time ruler
+  let major = cfg.major;
+  while ((major / cfg.duration) * plotW < (narrow ? 52 : 46)) major *= 2;
+  for (let t = 0; t <= cfg.duration + 0.001; t += cfg.minor) {
+    const isMajor = Math.abs(t / major - Math.round(t / major)) < 1e-6;
+    el("line", { class: "sc-tick" + (isMajor ? " sc-tick--major" : ""), x1: x(t), x2: x(t), y1: top - (isMajor ? 8 : 4), y2: top }, svg);
+    if (isMajor) {
+      const anchor = t === 0 ? "start" : (t >= cfg.duration - 0.001 ? "end" : "middle");
+      el("text", { class: "sc-time", x: x(t), y: top - 12, "text-anchor": anchor, text: fmt(t) }, svg);
+    }
+  }
+
+  const rows = cfg.speakers.map((sp, i) => {
+    const y0 = top + i * rowH;
+    const sTop = y0 + dirBand, sMid = sTop + staffH / 2, sBot = sTop + staffH;
+    const g = el("g", {}, svg);
+    for (let k = 0; k < 5; k++) el("line", { class: "sc-staff", x1: L, x2: L + plotW, y1: sTop + k * (staffH / 4), y2: sTop + k * (staffH / 4) }, g);
+    el("circle", { cx: 4, cy: sMid, r: 3.5, style: `fill:${VOICES[i]}` }, g);
+    const label = el("text", { class: "sc-label", x: 12, y: sMid + 4, text: sp }, g);
+    const turnsG = el("g", {}, g);
+    const ghostG = el("g", { class: "sc-ghost" }, g);
+    const colorG = el("g", { "clip-path": `url(#${clipId})`, style: `fill:${VOICES[i]}` }, g);
+    return { y0, sTop, sMid, sBot, g, label, turnsG, ghostG, colorG, dirs: [], nvs: [] };
+  });
+
+  const turnEls = cfg.turns.map((tn) => el("rect", {
+    class: "sc-turn", x: x(tn.t0), y: rows[tn.s].sTop - 3, width: Math.max(1, x(tn.t1) - x(tn.t0)),
+    height: staffH + 6, rx: 2, style: `fill:${VOICES[tn.s]};opacity:.09`
+  }, rows[tn.s].turnsG));
+
+  // Waveform bars: a grey copy, and a coloured copy revealed by the playhead
+  const rnd = mulberry32(cfg.seed || 7);
+  const pitch = cfg.pitch || 3, bw = Math.max(1.1, pitch * 0.58);
+  const nSlots = Math.floor(plotW / pitch);
+  const hasBar = new Array(cfg.turns.length).fill(false);
+  let ti = 0;
+  const bar = (tn, px, tMid) => {
+    const edge = Math.min(1, (tMid - tn.t0) / 1.5, (tn.t1 - tMid) / 1.5);
+    const env = 0.55 + 0.25 * Math.sin(tMid * 0.21 + tn.s * 1.7) + 0.2 * Math.sin(tMid * 0.057 + tn.s);
+    const a = Math.max(0.12, Math.min(1, env * (0.45 + 0.55 * rnd()) * Math.max(0.35, edge)));
+    const h = Math.max(2, a * (staffH - 2));
+    const r = rows[tn.s];
+    const attrs = { x: px - bw / 2, y: r.sMid - h / 2, width: bw, height: h, rx: bw / 2 };
+    el("rect", attrs, r.colorG);
+    el("rect", attrs, r.ghostG);
+  };
+  for (let i = 0; i < nSlots; i++) {
+    const px = L + (i + 0.5) * pitch;
+    const tMid = ((px - L) / plotW) * cfg.duration;
+    while (ti < cfg.turns.length - 1 && cfg.turns[ti].t1 < tMid) ti++;
+    const tn = cfg.turns[ti];
+    if (tn && tMid >= tn.t0 && tMid <= tn.t1) { bar(tn, px, tMid); hasBar[ti] = true; }
+  }
+  cfg.turns.forEach((tn, i) => { if (!hasBar[i]) bar(tn, (x(tn.t0) + x(tn.t1)) / 2, (tn.t0 + tn.t1) / 2); });
+
+  // Directions (in time order; skipped when they would collide)
+  const dirs = cfg.directions.slice().sort((a, b) => a.t - b.t);
+  dirs.forEach((d) => {
+    const r = rows[d.s];
+    let px = x(d.t) + 1;
+    const txt = el("text", { class: "sc-dir", x: px, y: r.y0 + dirBand - 6, text: d.text }, r.g);
+    const w = txt.getComputedTextLength();
+    if (px + w > L + plotW) { px = L + plotW - w; txt.setAttribute("x", px); }
+    if (collides(r.dirs, px, px + w, 10)) { txt.remove(); return; }
+    r.dirs.push([px, px + w]);
+  });
+
+  // Hairpins (loudness changes), only where no direction is written
+  cfg.hairpins.forEach((hp) => {
+    const r = rows[hp.s], y = r.y0 + dirBand / 2 + 1, x0 = x(hp.t0), x1 = x(hp.t1), o = 4.5;
+    if (x1 - x0 < 24 || collides(r.dirs, x0, x1, 8)) return;
+    const d = hp.type === "cresc" ? `M${x1},${y - o}L${x0},${y}L${x1},${y + o}` : `M${x0},${y - o}L${x1},${y}L${x0},${y + o}`;
+    el("path", { class: "sc-hairpin", d }, r.g);
+    r.dirs.push([x0, x1]);
+  });
+
+  // NV marks
+  cfg.nv.forEach((n) => {
+    const r = rows[n.s], px = x(n.t), lx = px - 3;
+    const txt = el("text", { class: "sc-nv", x: lx, y: r.sBot + 14, text: n.text }, r.g);
+    const w = txt.getComputedTextLength();
+    if (collides(r.nvs, lx, lx + w, 8) || lx + w > L + plotW + 2) { txt.remove(); return; }
+    r.nvs.push([lx, lx + w]);
+    el("path", { d: `M${px},${r.sTop - 4}l3,3.5l-3,3.5l-3,-3.5z`, style: "fill:var(--ink)" }, r.g);
+  });
+
+  const head = el("g", { class: "sc-playhead" }, svg);
+  el("line", { x1: 0, x2: 0, y1: top - 2, y2: H }, head);
+  el("path", { d: "M-5,-9h10v5l-5,5l-5,-5z", transform: `translate(0 ${top - 2})` }, head);
+
+  let lastActive = -1;
+  function setTime(t) {
+    const px = x(t);
+    clipRect.setAttribute("width", px);
+    head.setAttribute("transform", `translate(${px} 0)`);
+    let active = -1;
+    for (let i = 0; i < cfg.turns.length; i++) { const tn = cfg.turns[i]; if (t >= tn.t0 && t <= tn.t1) { active = i; break; } }
+    if (active !== lastActive) {
+      if (lastActive >= 0) turnEls[lastActive].style.opacity = ".09";
+      if (active >= 0) turnEls[active].style.opacity = ".22";
+      rows.forEach((r, i) => r.label.classList.toggle("is-active", active >= 0 && cfg.turns[active].s === i));
+      lastActive = active;
+    }
+    let dir = null;
+    if (active >= 0) {
+      const s = cfg.turns[active].s;
+      for (const d of dirs) if (d.s === s && d.t <= t + 0.5) dir = d;
+    }
+    return { speaker: active >= 0 ? cfg.turns[active].s : -1, direction: dir };
+  }
+  return { setTime, L, plotW, W };
+}
+
+// An illustrative 30-minute, four-speaker dialogue
+function makeDialogue() {
+  const R = mulberry32(20270425);
+  const D = 1800, turns = [];
+  let t = 0, cur = -1;
+  const pick = (w) => { const s = w.reduce((a, b) => a + b, 0); let r = R() * s; for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return i; } return 0; };
+  while (t < D - 2) {
+    let s;
+    if (turns.length === 0) s = 0;
+    else if (turns.length === 1) s = 1;
+    else { const w = [0.40, 0.30, t > 150 ? 0.22 : 0, t > 640 ? 0.2 : 0]; w[cur] = 0; s = pick(w); }
+    const d = turns.length === 0 ? 62 : (R() < 0.2 ? 60 + R() * 140 : 6 + Math.pow(R(), 1.3) * 55);
+    const t1 = Math.min(D, t + d);
+    turns.push({ s, t0: t, t1 });
+    cur = s;
+    t = t1 + (R() < 0.15 ? 3 + R() * 4 : 0.4 + R() * 1.4);
+  }
+  return turns;
+}
+function turnAfter(turns, s, t, frac = 0) {
+  const tn = turns.find((x) => x.s === s && x.t1 >= t && x.t1 - x.t0 > 6) || turns.find((x) => x.s === s);
+  const t0 = Math.max(tn.t0, t);
+  return t0 + frac * (tn.t1 - t0);
+}
+
+const heroTurns = makeDialogue();
+const heroCfg = {
+  duration: 1800, minor: 60, major: 300, pitch: 3, seed: 11,
+  speakers: ["S1", "S2", "S3", "S4"],
+  turns: heroTurns,
+  directions: [
+    { s: 0, t: turnAfter(heroTurns, 0, 0), text: "calm, then bright" },
+    { s: 1, t: turnAfter(heroTurns, 1, 0), text: "curious, animated" },
+    { s: 2, t: turnAfter(heroTurns, 2, 0), text: "low pitch, measured" },
+    { s: 3, t: turnAfter(heroTurns, 3, 600), text: "soft-spoken, slow" },
+    { s: 0, t: turnAfter(heroTurns, 0, 900), text: "faster, excited" },
+    { s: 1, t: turnAfter(heroTurns, 1, 1150), text: "warmer, quieter" },
+    { s: 2, t: turnAfter(heroTurns, 2, 1380), text: "amused" },
+    { s: 3, t: turnAfter(heroTurns, 3, 1500), text: "firm, louder" },
+  ],
+  hairpins: [
+    { s: 0, t0: 470, t1: 700, type: "cresc" },
+    { s: 1, t0: 1480, t1: 1700, type: "dim" },
+    { s: 2, t0: 700, t1: 900, type: "cresc" },
+  ],
+  nv: [
+    { s: 1, t: turnAfter(heroTurns, 1, 70, 0.4), text: "[laughter]" },
+    { s: 0, t: turnAfter(heroTurns, 0, 520, 0.5), text: "[sigh]" },
+    { s: 2, t: turnAfter(heroTurns, 2, 1040, 0.3), text: "[laughter]" },
+    { s: 3, t: turnAfter(heroTurns, 3, 1220, 0.4), text: "[cough]" },
+    { s: 0, t: turnAfter(heroTurns, 0, 1560, 0.5), text: "[laughter]" },
+    { s: 1, t: turnAfter(heroTurns, 1, 380, 0.5), text: "[sigh]" },
+  ],
+};
+
+const heroSvg = document.getElementById("hero-score");
+const nowEl = document.getElementById("score-now");
+const timeEl = document.getElementById("score-time");
+let hero = renderScore(heroSvg, heroCfg);
+let heroT = reduceMotion ? 1800 * 0.62 : 0;
+let scrubbing = false, visible = true, lastFrame = null;
+const LOOP_MS = 52000;
+
+function paintHero(t) {
+  const st = hero.setTime(t);
+  timeEl.textContent = `${fmt(t)} / 30:00`;
+  nowEl.innerHTML = st.speaker >= 0 ? `<b>S${st.speaker + 1}</b>${st.direction ? st.direction.text : ""}` : `<b>—</b>pause`;
+}
+paintHero(heroT);
+
+function tick(ts) {
+  if (lastFrame == null) lastFrame = ts;
+  const dt = ts - lastFrame; lastFrame = ts;
+  if (!scrubbing && visible) { heroT = (heroT + (dt / LOOP_MS) * 1800) % 1800; paintHero(heroT); }
+  requestAnimationFrame(tick);
+}
+if (!reduceMotion) requestAnimationFrame(tick);
+
+heroSvg.addEventListener("pointermove", (e) => {
+  const rect = heroSvg.getBoundingClientRect();
+  const px = ((e.clientX - rect.left) / rect.width) * hero.W;
+  if (px < hero.L) return;
+  scrubbing = true;
+  heroT = Math.min(1800, Math.max(0, ((px - hero.L) / hero.plotW) * 1800));
+  paintHero(heroT);
+});
+heroSvg.addEventListener("pointerleave", () => { scrubbing = false; });
+if ("IntersectionObserver" in window) {
+  new IntersectionObserver((ents) => { visible = ents[0].isIntersecting; }).observe(heroSvg);
+}
+
+/* ------------------------------------------------------------------
+   Figure 3: one 12-minute source recording, three ways to cut it
+   ------------------------------------------------------------------ */
+const VIEW_INFO = {
+  short: {
+    name: "Continuo-Short",
+    rule: "One speaker, 0.5–30 s, taken wherever an utterance passes the quality criteria.",
+    stats: [["Examples", "99.8M"], ["Audio", "146,325 h"], ["Languages", "41"]],
+  },
+  long: {
+    name: "Continuo-Long",
+    rule: "One speaker, ≥ 30 s. Extends across adjacent same-speaker regions and ends at a speaker change.",
+    stats: [["Examples", "4.26M"], ["Audio", "155,688 h"], ["Hours from > 5 min", "50.0%"]],
+  },
+  dialogue: {
+    name: "Continuo-Dialogue",
+    rule: "2–6 speakers, windows ≥ 30 s. Turn order and timing are preserved as recorded.",
+    stats: [["Examples", "1.54M"], ["Audio", "96,452 h"], ["Hours from > 5 min", "66.8%"]],
+  },
+};
+function makeSource() {
+  const R = mulberry32(99);
+  const turns = [];
+  const exchange = (a, b, first) => {
+    let t = a, s = first;
+    while (t < b - 4) { const t1 = Math.min(b, t + 5 + R() * 19); turns.push({ s, t0: t, t1 }); s = 1 - s; t = t1 + 0.6 + R() * 1.2; }
+  };
+  turns.push({ s: 0, t0: 1, t1: 214 });
+  exchange(215.6, 447, 1);
+  turns.push({ s: 1, t0: 449, t1: 609 });
+  exchange(611, 719, 0);
+  const utts = [];
+  turns.forEach((tn) => {
+    let t = tn.t0;
+    while (t < tn.t1 - 0.5) {
+      const len = tn.t1 - tn.t0 <= 25 ? tn.t1 - t : Math.min(tn.t1 - t, 6 + R() * 16);
+      utts.push({ s: tn.s, t0: t, t1: t + len }); t += len + 0.7;
+    }
+  });
+  return { D: 720, utts, longs: turns.filter((tn) => tn.t1 - tn.t0 >= 30), dialogues: [{ t0: 215.6, t1: 447 }, { t0: 611, t1: 719 }] };
+}
+const SRC = makeSource();
+const viewsSvg = document.getElementById("views-svg");
+let viewBars = [], viewState = "short", viewX = null;
+
+function renderViews() {
+  while (viewsSvg.firstChild) viewsSvg.removeChild(viewsSvg.firstChild);
+  const W = Math.max(260, viewsSvg.clientWidth || viewsSvg.parentNode.clientWidth);
+  const H = 124, pad = 2, x = (t) => pad + (t / SRC.D) * (W - pad * 2);
+  const mid = 72, amp = 25;
+  viewsSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  viewsSvg.setAttribute("height", H);
+  el("line", { x1: pad, x2: W - pad, y1: mid, y2: mid, class: "sc-staff" }, viewsSvg);
+  const R = mulberry32(5), pitch = 3, bw = 1.8;
+  viewBars = [];
+  let ui = 0;
+  for (let px = pad + 1.5; px < W - pad; px += pitch) {
+    const t = ((px - pad) / (W - pad * 2)) * SRC.D;
+    while (ui < SRC.utts.length - 1 && SRC.utts[ui].t1 < t) ui++;
+    const u = SRC.utts[ui];
+    if (!(t >= u.t0 && t <= u.t1)) continue;
+    const env = 0.55 + 0.3 * Math.sin(t * 0.19 + u.s * 2) + 0.15 * Math.sin(t * 0.05);
+    const h = Math.max(3, env * (0.4 + 0.6 * R()) * amp * 2 * Math.min(1, (t - u.t0) / 1.2 + 0.3, (u.t1 - t) / 1.2 + 0.3));
+    viewBars.push({ r: el("rect", { class: "vs-bar", x: px - bw / 2, y: mid - h / 2, width: bw, height: h, rx: 0.9, style: `fill:${VOICES[u.s]}` }, viewsSvg), t });
+  }
+  for (let m = 0; m <= 12; m += 2) {
+    el("text", { class: "vs-axis", x: x(m * 60), y: H - 2, "text-anchor": m === 0 ? "start" : m === 12 ? "end" : "middle", text: m + ":00" }, viewsSvg);
+  }
+  viewX = x;
+  el("g", { id: "vs-brackets" }, viewsSvg);
+  applyView(viewState);
+}
+function applyView(v) {
+  viewState = v;
+  const info = VIEW_INFO[v];
+  document.getElementById("vp-name").innerHTML = info.name.replace("Continuo", '<span class="sc">Continuo</span>');
+  document.getElementById("vp-rule").textContent = info.rule;
+  document.getElementById("vp-stats").innerHTML = info.stats.map(([k, val]) => `<div><dt>${k}</dt><dd>${val}</dd></div>`).join("");
+  document.querySelectorAll("#views-tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === v)));
+  const segs = v === "short" ? SRC.utts : v === "long" ? SRC.longs : SRC.dialogues;
+  viewBars.forEach(({ r, t }) => { r.style.opacity = segs.some((s) => t >= s.t0 && t <= s.t1) ? "1" : "0.18"; });
+  const g = viewsSvg.querySelector("#vs-brackets");
+  while (g.firstChild) g.removeChild(g.firstChild);
+  const yb = 28;
+  segs.forEach((s) => {
+    const x0 = viewX(s.t0) + 0.5, x1 = viewX(s.t1) - 0.5;
+    if (v === "short") {
+      el("path", { class: "vs-bracket", d: `M${x0},${yb + 10}V${yb + 4}H${x1}V${yb + 10}`, style: "stroke-width:1" }, g);
+    } else {
+      el("path", { class: "vs-bracket", d: `M${x0},${yb + 10}V${yb}H${x1}V${yb + 10}` }, g);
+      const cx = (x0 + x1) / 2;
+      el("rect", { x: cx - 20, y: yb - 9, width: 40, height: 16, style: "fill:var(--bg)" }, g);
+      el("text", { class: "vs-bracket-label", x: cx, y: yb + 3, "text-anchor": "middle", text: fmt(s.t1 - s.t0) }, g);
+    }
+  });
+  el("text", { class: "vs-bracket-label", x: 0, y: 12, text: v === "short" ? `${segs.length} utterances, each under 30 s` : v === "long" ? "2 monologues ≥ 30 s" : "2 exchange windows ≥ 30 s" }, g);
+}
+const viewTabs = document.getElementById("views-tabs");
+viewTabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) applyView(b.dataset.view); });
+arrowKeys(viewTabs, "view", applyView);
+renderViews();
+
+/* ------------------------------------------------------------------
+   Results (paper Tables 4–6)
+   ------------------------------------------------------------------ */
+const BENCH = {
+  ttsd: {
+    tab: "TTSD-Eval",
+    caption: "<b>Table 1.</b> Dialogue synthesis on TTSD-Eval. ACC: speaker-attribution accuracy; SIM: speaker similarity; CER/WER: character/word error rate.",
+    groups: [["Chinese", [["ACC", 1], ["SIM", 1], ["CER", -1]]], ["English", [["ACC", 1], ["SIM", 1], ["WER", -1]]]],
+    params: true,
+    rows: [
+      ["Higgs Audio v2", "3B", ["60.97", "0.63", "79.32", "70.60", "0.62", "47.54"]],
+      ["VibeVoice-1.5B", "1.5B", ["88.25", "0.73", "9.21", "93.58", "0.68", "10.18"]],
+      ["MOSS-TTSD", "8B", ["95.36", "0.80", "6.08", "95.00", "0.74", "11.09"]],
+      ["Continuo-AR", "0.6B", ["92.89", "0.75", "6.92", "92.66", "0.65", "12.25"], "ours"],
+      ["Continuo-NAR", "0.6B", ["95.30", "0.78", "5.27", "94.89", "0.73", "9.93"], "ours"],
+    ],
+  },
+  testset: {
+    tab: "Continuo-testset",
+    caption: "<b>Table 1.</b> Results on <span class=\"sc\">Continuo</span>-testset (recordings up to 30 min, 1–4 speakers). ACC is macro-averaged over multi-speaker cases.",
+    groups: [["Chinese", [["ACC", 1], ["SIM", 1], ["CER", -1]]], ["English", [["ACC", 1], ["SIM", 1], ["WER", -1]]]],
+    params: true,
+    rows: [
+      ["Ground truth", "–", ["99.33", "0.88", "3.00", "98.38", "0.85", "3.00"], "ref"],
+      ["Higgs Audio v2", "3B", ["75.00", "0.74", "75.46", "72.84", "0.67", "81.38"]],
+      ["VibeVoice-1.5B", "1.5B", ["93.78", "0.81", "4.61", "95.98", "0.75", "5.66"]],
+      ["MOSS-TTSD", "8B", ["99.28", "0.87", "2.18", "99.22", "0.81", "5.83"]],
+      ["Continuo-AR", "0.6B", ["98.57", "0.84", "3.67", "95.05", "0.74", "6.82"], "ours"],
+      ["Continuo-NAR", "0.6B", ["97.38", "0.84", "8.62", "96.46", "0.79", "6.62"], "ours"],
+    ],
+  },
+  instruct: {
+    tab: "InstructTTSEval",
+    caption: "<b>Table 1.</b> Instruction following on InstructTTSEval, scored by Gemini-2.5-Pro. APS: acoustic-parameter specification; DSD: descriptive-style directive; RP: role-play.",
+    groups: [["Chinese", [["APS", 1], ["DSD", 1], ["RP", 1], ["Avg.", 1]]], ["English", [["APS", 1], ["DSD", 1], ["RP", 1], ["Avg.", 1]]]],
+    params: false,
+    rows: [
+      ["VoxInstruct", "", ["47.5", "52.3", "42.6", "47.5", "54.9", "57.0", "39.3", "50.4"]],
+      ["FlexiVoice-Base", "", ["56.7", "59.1", "59.5", "58.4", "63.6", "75.0", "60.6", "66.4"]],
+      ["Qwen3-TTS-12Hz-VD", "", ["85.2", "81.1", "65.1", "77.1", "82.9", "82.4", "68.4", "77.9"]],
+      ["Continuo-AR", "", ["82.0", "72.5", "74.0", "76.2", "83.0", "83.5", "68.5", "78.3"], "ours"],
+      ["Continuo-NAR", "", ["69.2", "59.8", "55.6", "61.6", "67.4", "66.5", "49.8", "61.2"], "ours"],
+    ],
+  },
+};
+const benchTabs = document.getElementById("bench-tabs");
+const benchTable = document.getElementById("bench-table");
+benchTabs.innerHTML = Object.entries(BENCH).map(([k, b], i) =>
+  `<button role="tab" data-bench="${k}" aria-selected="${i === 0}">${b.tab}</button>`).join("");
+function showBench(key) {
+  const b = BENCH[key];
+  benchTabs.querySelectorAll("button").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.bench === key)));
+  const cols = b.groups.flatMap(([, cs]) => cs);
+  const rank = cols.map((c, j) => {
+    const vals = [...new Set(b.rows.filter((r) => r[3] !== "ref").map((r) => parseFloat(r[2][j])))].sort((a, z) => (z - a) * c[1]);
+    return { best: vals[0], second: vals[1] };
+  });
+  let h1 = `<tr><th rowspan="2" style="vertical-align:bottom">Model</th>${b.params ? '<th rowspan="2" style="vertical-align:bottom">Params.</th>' : ""}`;
+  b.groups.forEach(([g, cs]) => { h1 += `<th colspan="${cs.length}" class="grp">${g}</th>`; });
+  let h2 = "<tr>";
+  b.groups.forEach(([, cs]) => cs.forEach(([n, dir]) => { h2 += `<th class="sub">${n}${dir > 0 ? "↑" : "↓"}</th>`; }));
+  let prevKind = null;
+  const body = b.rows.map(([name, p, vals, kind]) => {
+    const cells = vals.map((v, j) => {
+      const num = parseFloat(v), rk = rank[j];
+      const cls = kind === "ref" ? "" : num === rk.best ? "best" : num === rk.second ? "second" : "";
+      return `<td class="${cls}">${v}</td>`;
+    }).join("");
+    const cls = [kind === "ours" ? "ours" : kind === "ref" ? "ref" : "", (kind === "ours" && prevKind !== "ours") || prevKind === "ref" ? "mid" : ""].join(" ").trim();
+    prevKind = kind;
+    return `<tr class="${cls}"><td>${name}</td>${b.params ? `<td>${p}</td>` : ""}${cells}</tr>`;
+  }).join("");
+  benchTable.innerHTML = `<caption>${b.caption}</caption><thead>${h1}</tr>${h2}</tr></thead><tbody>${body}</tbody>`;
+}
+benchTabs.addEventListener("click", (e) => { const t = e.target.closest("button"); if (t) showBench(t.dataset.bench); });
+arrowKeys(benchTabs, "bench", showBench);
+showBench("ttsd");
+
+/* ------------------------------------------------------------------
+   Audio samples. Put audio paths in the "" slots
+   (e.g. "audio/dialogue/zh_01_ar.wav"); empty slots render as pending.
+   `text` is how many leading columns hold text rather than audio.
+   ------------------------------------------------------------------ */
+const SAMPLES = [
+  {
+    title: "Multi-Speaker Dialogue", meta: "Continuo-testset · 2–4 speakers · up to 30 min",
+    columns: ["Script", "Prompts", "Ground truth", "Continuo-AR", "Continuo-NAR"], text: 1,
+    rows: [
+      ["[zh, 3 speakers] Script excerpt goes here.", "", "", "", ""],
+      ["[en, 4 speakers] Script excerpt goes here.", "", "", "", ""],
+    ],
+  },
+  {
+    title: "Single-Speaker Long-Form", meta: "Continuo-testset · narration and monologue",
+    columns: ["Script", "Prompt", "Ground truth", "Continuo-AR", "Continuo-NAR"], text: 1,
+    rows: [
+      ["[zh] Script excerpt goes here.", "", "", "", ""],
+      ["[en] Script excerpt goes here.", "", "", "", ""],
+    ],
+  },
+  {
+    title: "Instruction Control", meta: "Long-form · natural-language style instructions",
+    columns: ["Instruction", "Prompt", "Continuo-AR", "Continuo-NAR"], text: 1,
+    rows: [
+      ["[zh] <i>calm, then bright</i>", "", "", ""],
+      ["[en] <i>curious, animated</i>", "", "", ""],
+    ],
+  },
+  {
+    title: "Nonverbal Vocalizations", meta: "Long-form · NV tags in the script",
+    columns: ["Script with NV tags", "Prompt", "Continuo-AR", "Continuo-NAR"], text: 1,
+    rows: [
+      ["[zh] Script with <span class=\"mono\">[Laughter]</span> goes here.", "", "", ""],
+      ["[en] Script with <span class=\"mono\">[Sigh]</span> goes here.", "", "", ""],
+    ],
+  },
+];
+
+const PLAY = '<svg viewBox="0 0 12 12" fill="currentColor"><path d="M2.5 1.2v9.6L10.5 6z"/></svg>';
+const PAUSE = '<svg viewBox="0 0 12 12" fill="currentColor"><path d="M2.2 1.2h2.8v9.6H2.2zM7 1.2h2.8v9.6H7z"/></svg>';
+const audios = [];
+function buildPlayer(src) {
+  const wrap = document.createElement("div");
+  wrap.className = "player" + (src ? "" : " is-empty");
+  wrap.innerHTML = `<button type="button" aria-label="${src ? "Play" : "Audio pending"}" ${src ? "" : "disabled"}>${PLAY}</button><div class="ptrack"><span></span></div><span class="ptime">${src ? "0:00" : "—"}</span>`;
+  if (!src) return wrap;
+  const btn = wrap.querySelector("button"), track = wrap.querySelector(".ptrack"), fill = track.firstChild, tm = wrap.querySelector(".ptime");
+  const audio = new Audio(src);
+  audio.preload = "metadata";
+  audios.push(audio);
+  btn.addEventListener("click", () => {
+    if (audio.paused) { audios.forEach((a) => a !== audio && a.pause()); audio.play(); } else audio.pause();
+  });
+  audio.addEventListener("play", () => { btn.innerHTML = PAUSE; btn.setAttribute("aria-label", "Pause"); });
+  audio.addEventListener("pause", () => { btn.innerHTML = PLAY; btn.setAttribute("aria-label", "Play"); });
+  audio.addEventListener("loadedmetadata", () => { tm.textContent = fmt(audio.duration); });
+  audio.addEventListener("timeupdate", () => {
+    fill.style.width = (audio.duration ? (audio.currentTime / audio.duration) * 100 : 0) + "%";
+    tm.textContent = fmt(audio.currentTime);
+  });
+  track.addEventListener("click", (e) => {
+    if (!audio.duration) return;
+    const r = track.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+  });
+  return wrap;
+}
+const samplesRoot = document.getElementById("samples-root");
+if (samplesRoot) SAMPLES.forEach((g) => {   // section is commented out for now
+  const sec = document.createElement("div");
+  sec.className = "sample-group";
+  sec.innerHTML = `<div class="sample-head"><h3 class="h3">${g.title}</h3><span>${g.meta}</span></div><div class="tscroll"><table class="atab"><thead><tr>${g.columns.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody></tbody></table></div>`;
+  const tbody = sec.querySelector("tbody");
+  g.rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    row.forEach((cell, j) => {
+      const td = document.createElement("td");
+      if (j < g.text) { td.className = "txt"; td.innerHTML = cell; }
+      else { td.className = "aud"; td.appendChild(buildPlayer(cell)); }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  samplesRoot.appendChild(sec);
+});
+
+/* ------------------------------------------------------------------
+   Training data preview: real examples from the training set (test-set
+   recordings excluded), audio in assets/preview/.
+     id, lang, dur ("m:ss"), dnsmos, audio, text (NV tags like [Laughter] inline)
+     optional instruction: string, or [[time, text], ...] for timestamped changes
+     dialogue: speakers, turns: [[speaker, text], ...], optional instruction: [[speaker, text], ...]
+   The Annotation column appears only when a view has instruction annotations.
+   ------------------------------------------------------------------ */
+const PREVIEW = {
+  short: [
+    {"id": "f0b581d4e2b109af_274_000", "lang": "zh", "dur": "0:13", "dnsmos": 3.58, "audio": "assets/preview/f0b581d4e2b109af_274_000.m4a", "text": "这一波野怪萨满祭司啊，这进攻进攻怪其实是不太不不怎么厉害啊。这不这波萨满祭司对魔法攻击、对建筑的伤害呢也比较低，所以说这波怪一般人都很贪的。我玩的时候我也很贪。"},
+    {"id": "380f0dfdbafeaca4_234_000", "lang": "zh", "dur": "0:10", "dnsmos": 3.58, "audio": "assets/preview/380f0dfdbafeaca4_234_000.m4a", "text": "啊，这个鸟巢的话和三代的功能是一样的。之前我们也说过，我们第一次没有干掉那个大屁股的话，第二次啊，不是说第二次。"},
+    {"id": "d1815f8c11f57853_107_000", "lang": "en", "dur": "0:14", "dnsmos": 3.63, "audio": "assets/preview/d1815f8c11f57853_107_000.m4a", "text": "The Roman climatic optimum meant warmer temperatures in general in the Mediterranean. So what that means is is more evaporation from the Mediterranean, which means more moisture in the air, which in turn means more precipitation and higher agricultural yields."},
+    {"id": "479fa24457cf7b5f_531_000", "lang": "en", "dur": "0:11", "dnsmos": 3.62, "audio": "assets/preview/479fa24457cf7b5f_531_000.m4a", "text": "And while trust is very important when it comes to crew resource management, you also want to verify. The captain did not verify the information that the first officer was giving him."},
+    {"id": "7a1d1ac6bc049239_504_000", "lang": "ja", "dur": "0:05", "dnsmos": 3.67, "audio": "assets/preview/7a1d1ac6bc049239_504_000.m4a", "text": "夜中に一人家を抜け出し、町をさまようこともあったと言います。"},
+    {"id": "3adfd4bf46078fbf_024_000", "lang": "de", "dur": "0:06", "dnsmos": 3.51, "audio": "assets/preview/3adfd4bf46078fbf_024_000.m4a", "text": "und dann glaube ich hatte Caesar dich auch an Tag eins gefragt und jetzt sitzt du tatsächlich hier ein paar Monate später"},
+    {"id": "832330c475d34e28_158_000", "lang": "ko", "dur": "0:05", "dnsmos": 3.58, "audio": "assets/preview/832330c475d34e28_158_000.m4a", "text": "그러니까 우리 박성진 대표님 여기 나와서 하시는 말씀은 거의 한 절반 이상의 책."},
+    {"id": "e45a430b135137fa_012_000", "lang": "es", "dur": "0:05", "dnsmos": 3.5, "audio": "assets/preview/e45a430b135137fa_012_000.m4a", "text": "Un banquero gestiona las transacciones financieras y ofrece asesoramiento sobre inversiones."},
+    {"id": "f594b99a9f8bebd5_029_000", "lang": "fr", "dur": "0:06", "dnsmos": 3.56, "audio": "assets/preview/f594b99a9f8bebd5_029_000.m4a", "text": "Des États-Unis à la France, comment le rap est-il passé d'un genre de niche à une machine à cash?"},
+    {"id": "b1fed09ea3e20531_062_002", "lang": "ar", "dur": "0:05", "dnsmos": 3.53, "audio": "assets/preview/b1fed09ea3e20531_062_002.m4a", "text": "فز فيليان أصيب، وحصل على مليون دولار وااا مليون دولار."},
+  ],
+  long: [
+    {"id": "21bdd2f23d76774f_L0000", "lang": "en", "dur": "1:06", "dnsmos": 3.5, "audio": "assets/preview/21bdd2f23d76774f_L0000.m4a", "text": "This week's episode is brought to you in part by the Gnomis and Science Young Explorer Award. Are you doing excellent research that deserves recognition? The Gnomis and Science Young Explorer Award recognizes bold young researchers who ask fundamental questions at the intersection of the life and social sciences. Researchers who take risks to address relevant and exciting questions with creative approaches, regardless of the research outcome. Submissions are due May fifteenth. Visit science.org/noMiss. That's N-O-M-I-S to apply today. This week's episode is brought to you in part by Science Careers. Looking for some career advice? Wondering how to get ahead or how to strike a better work-life balance? Visit our site to read how others are doing it. Use our individual development plan tool, access topic-specific article collections, or search for an exciting new job. Science Careers, produced by Science and AAAS, is a free website full of resources to help get the most out of your career. Visit sciencecareers.org today to get started."},
+    {"id": "e493d8306d31e428_L0005", "lang": "ja", "dur": "1:36", "dnsmos": 3.44, "audio": "assets/preview/e493d8306d31e428_L0005.m4a", "text": "さあ、いよいよベスト3の発表になります。第三位、コントンのクロマジシ。こちらアルステン、アルステンプラスともに取得難度が高いです。総合すると即率が約24.5%。天童でもなかなか見かけないカードで、尚且つ状態のいいカードというのはね、本当に出わない印象があります。 ベスト3にも入るのも頷ける幻級のカードです。持ってる人が素直にうらやましい。第2、カオスソルジャー海賊の者。アルス戦の取得率が約19.7%と20%台を切っており、完備品入手難度も第4位のカードになります。極品上級のカードの入手はかなり難しいと思いますし、そもそも超人気カードなので、お店に状態のいいカードが置かれていたらすぐに売れてしまうであろう争奪戦必死のカードです。 さあ皆さんいよいよ第一位の発表でございます。もしかしたら皆さん予想ついてるかもしれませんが堂々たる第一位こちらでございます。ブルーです。ホワイトドラゴンおめでとうございます。 完備品入手難度ランキング、備品入手難度ランキングともに1です。やはりデリブルはね、当時デッキに入れてた人も多かったと思いますし、そもそも傷が多い個体なので、現存する中で極上個体を探すのはね、かなりハードルが高いです。アルスティンの出現率が約15.6%というのも納得ですね。遊戯王の中で一番人気と言っていいカードなので、競争相手も多く、値段も非常に高いので、早々入手できるものではないなど感じます。 ぜひ見ている方の中で備品持ってる方いたらぜひ大切にしましょう。"},
+    {"id": "3036dc46ff51d833_L0009", "lang": "ru", "dur": "2:18", "dnsmos": 3.43, "audio": "assets/preview/3036dc46ff51d833_L0009.m4a", "text": "В начале сентября немцы подошли к Киеву. Жуков просил Сталина разрешить вывод войск из города. Только так, по его мнению, можно было спасти армию. Но Сталин считал, что Киев нельзя сдавать ни при каких обстоятельствах. Жуков был смущен, спас ста начальника генерального штаба. В начале сентября немцы начали операцию по окружению советских войск под Киевом. 15 сентября кольцо вокруг города замкнулось. В плен попало 450 тысяч человек. Киевский котел стал крупнейшим в мировой военной истории. Город был оккупирован, а основные немецкие силы продолжили наступление на Москву. На подступах к столице была построена мажайская линия обороны, проходящая через Волоколамск, Мажайск и Малоярославец. За три месяца более 50 тысяч человек выкопали 170 километров противотанковых рвов и оборудовали около 800 огневых точек. Но остановить германскую армию на этом рубеже так и не удалось. 3 октября без боя пал Орел. 6 немцы вошли в Брянск. 13 октября они заняли Калугу и Вязьму. 14 Тв. В окружении попало свыше полумиллиона советских солдат. Стalin находился на грани нервного срыва. Управляющий делами правительства Чайдаев вспоминал. Сталин ходил поспешно по кабинету с растущим раздражением. Это событие просто ошалело его. Я еще не видел товарища Сталина в таком состоянии. Он был потрясён, гневен, крайне возбуждён. Тем временем передовые части вермахта стремительно приближались к Москве. Немецкие бомбардировщики совершали регулярные налёты на советскую столицу. Отдельные бомбы падали прямо на Кремль. Некоторые попали в здание ЦК и Генштаба. От разрывов фугасов в Кремлевском арсенале погибли 92 человека. Бомбы взрывались прямо у Спасской башни и Царь-пушки. Одна из них разорвалась в сквере возле оружейной палаты, выбив стекла в здании правительства. 15 октября, когда до Москвы немцам оставалось чуть более 100 километров, Сталин начал готовиться к эвакуации."},
+  ],
+  dialogue: [
+    {"id": "1ed3448d4764381f_D0000", "lang": "zh", "dur": "11:43", "dnsmos": 3.11, "audio": "assets/preview/1ed3448d4764381f_D0000.m4a", "speakers": 2, "turns": [["S1", "Hello，大家好，我是营养师夏绿地。"], ["S2", "我是营养师小康。"], ["S1", "今天要来聊聊如何远离代谢症候群，守护健康关键。"], ["S2", "你的代谢力好吗？代谢震后曲可能是身体给你的一个警讯。我们先来看看什么是代谢震后曲吧。那相信大家一定都有听过有关于代谢震后群，其实它就是用来评估以及视诊许多慢性疾病。 像是有心血管疾病啊、糖尿病以及中风等等，其实它就是作为一个前兆。因为这些慢性病真正变成疾病之前，它是没有任何的一个症状，其实它很难被人家察觉，或是容易被人家忽略。所以可以透过观察自己我们本身的一个代谢症候群这个状况。 先作为一个预防，越早了解就可以越早行动，那越能提升自己的健康自主力，来创造状态很好的一个自己。"], ["S1", "那小康养师可以跟大家分享一下代谢症候群的诊断标准是什么吗？"], ["S2", "其实它的一个诊断标准啊，就是当一个人有五项检测标准同时出现了三项以上的一个代谢异常，就是有包含高血压、高血糖，还有我们的腰围过粗、三酸甘油脂过高、好的胆固醇过低的时候。 这就是代表身体的一个代谢系统，其实它正在一个失衡。接下来，它就会开始无声无息来去影响到我们身体的一个运作以及它的健康，而罹患慢性疾病的风险就会正在上升当中。那究竟有哪些人会有一些代谢症候群呢？"], ["S1", "那像代谢症候群，哪一些人需要特别注意这五项指标来检视？包含第一个，你觉得你的肚子特别大的人，比如说，嗯，像腰围啊，我们如果女生量超过八十公分，男生量超过九十公分，其实就是一个危险的状态。 应该要去关注一下自己的内脏脂肪的问题。那第二个就是是不是长长久坐呢？像嗯，我自己也是上班族嘛，所以就是一般上班时间坐着的时间比较长。那像这样子的生活形态，也会比较容易会有代谢症候群的风险。 那第三个就是饮食习惯，像如果嗯外食的时候比较多的话，嗯没有好好做选择，就会有一些高油、高糖、高盐的状况。那第四个就是要关心一下你自己跟你的家人是不是有三高的家族病史。 有这样子的状况的话，会比较容易会有代谢症候群。然后第五个就是生活习惯喽，就是抽烟跟饮酒。嗯，抽烟当然它会上升各式各样的心血管疾病的风险。那喝酒的话，就是如果不喝是最好。 那如果要喝的话，就是女生一杯，男生两杯的这个范围之内，会嗯比较减害一点。那最后一个第六个是，有些人可能会觉得，哎，好像没有太大的关系，但其实是跟我们身体运作很有关，就是压力的部分。 当压力过大的时候，我们的压力荷尔蒙会去影响到我们的内分泌系统，所以这些情况也会造成我们的代谢力下降，那就更容易有三高的问题。那接下来要请小康药师跟我们分享一下，说代谢症候群如果我有的话，代表什么？那它的影响会有哪一些呢？"], ["S2", "如果检测已经成为代谢症候群，那表示身体的代谢的调控啊，可能已经开始出现一些异常。不过这时候大家先不要太过的一个恐慌，因为代谢症候群它本身并不是一个疾病，它只是在未来会提高一些健康这个风险。 像是可能会罹患第二型的糖尿病啊的几率就会大幅的一个增加，然后甚至还可能会有罹患心脏病、心肌梗塞以及中风的一个风险的一个增加，再来就是会有脂肪肝以及肾脏的功能一个受损，那最后可能会去影响到一些认知功能。 和提高一个失智的一个风险。然后，其实代谢症候群呢，它也可以叫做一个隐形的一个危机，因为其实在这些慢性病发生之前啊，许多人他在初期通常是没有一些不适的一个症状，直到出现并发症之后才会发现。 所以这就是代谢之后取它真正的一个危险之处，所以它才被称之为一个隐形的一个危机。"], ["S1", "嗯，所以定期检查真的很重要，因为这些状况它不一定会有不舒服的问题，它是身体的一个表征。那再来，我们想要聊聊关于看起来代谢症状群好像是五个独立的指标，但其实这五个之间是有互相的作用关系。 那当我们身体嗯摄取的热量它大于我们消耗的热量的时候，我们会有比较多的内脏脂肪累积在身体里面。那这些内脏脂肪跟皮下脂肪不一样的地方就是，它会引起身体的发炎反应。那这样子的发炎会造成胰岛素阻抗，这应该大家常常有听到。 那这样子阻抗的情形呢？那它会进一步的再造成更多呃内脏器官的脂肪堆积。那这种异常的状况就会形成一个恶性循环，让我们的代谢力下降，然后三高的风险啊，失智的风险会上升。那所以最重要的解方有两个，第一个就是要降低我们的内脏脂肪。 第二个呢，就是要抗发炎。那接下来我们会分享几个生活中可以做的方式，来远离代谢症候群。"], ["S2", "其实预防以及改善代谢症候群，它最重要的就是有关于生活形态的一个改变。首先，第一个，它必须要有健康的一个饮食习惯。第一个，我们可以先选择就是自己容易执行的一些健康饮食法，像是我们先前有跟大家就讨论到有关于地中海饮食、德苏饮食。 或者是以植物为主的一个饮食等等，那再就是要多摄取一些高纤的蔬果，那多选择一些全谷类啊，还有豆类，那当然还要减少一些精制糖、油炸食物以及含糖饮料的一个摄取。那最后一个也是非常重要的，就是有关于健康油脂的一个烹调。 大家可以多尝试一些多种的一个植物油，以及适量的一个坚果的摄取。那除了健康的一个饮食的部分，那当然就是有关于要去增加大家的一个活动量，以及它的规律运动。那我们就是要打破一些连续的一个久坐，每三十五分钟到四十五分钟的时候就要站起来活动一下。 因为其实现在大家的上班族的时间，因为工作压力大，都常常都会在位置上一直坐，一坐就是一个小时以上，所以大家还是要不定时起来稍微运动一下，走下茶水间装个水，然后喝一下白开水，来稍微运动一下。那再来还有有关于每周可以至少一百五十分钟的一个有氧运动。 像是有快走啊、游泳等，都是不错的一些选择。那同时这一周大概要有两次的一个肌力训练，来帮助我们肌肉的维持以及我们的代谢率哦。"], ["S1", "那除了这个之外，我们还要关注自己的体重以及腰围，尤其是腰围的部分，因为它可以代表我们的内脏脂肪。有时候会有一些人，他的 B M I 就是身体的身高跟体重的比例算起来是健康的范围，但是他的腰围就超过了，那就要特别小心。 那第四个是刚刚有提到说抽烟跟喝酒会破坏我们的心血管嘛，所以戒烟跟节制的饮酒是一个很重要的生活形态的调整。那再来第五个就是压力的管理，选一个自己适合的舒压的方式。 像我们在前面的激素胃部保养的部分也有讲到说，关于压力的管理其实是维持健康很重要的一环。那它不止在胃病的部分有帮助，在心血管的预防以及管理的部分，压力管理也非常重要。那第六个就是要做健检喽。 像刚刚提到代谢症候群的这五个标准，有一些是需要做抽血检查才会知道的。那有一些像腰围、体重是你可以在居家测量，所以健检跟你自己生活的观察互相搭配，我们才可以一起远离代谢症候群。"], ["S2", "然后最后一个就是要必须要一个很充足的一个睡眠。"], ["S1", "嗯。"], ["S2", "像大家都知道，其实大家都是建议十点以前就要上床睡觉。大家其实也听到之前那个谁蔡依林都说她几点就要睡觉，九点半的时候就要睡觉。 所以还可以维持他良好的一个生活的形态的作息，还维持他的一些美容啊，或者是他的一些生理的一个机能这样子。所以充足睡眠也是一个非常重要的一个因素哦。"], ["S1", "那最后我们来看一下，就是有五项指标嘛。那如果有五个都是指标都很正常的话，那就恭喜你，代表你现在的代谢功能呢是很正常的，你可以维持现在好的生活形态。然后记得一两年要做一次健检。"], ["S2", "那如果是出现一到两项的一个异常者呢？其实这就是我们要调整的一个黄金时期，可以去透过该讲的饮食的管理，以及运动，还有一些减压的一个部分。那绝大多数可以在一个短期内就可以获得明显的一个改善，避免疾病进一步的一个发展。"], ["S1", "那最后一个就是，如果你有三项以上异常，就这已经属于代谢症候群喽。那你就一定一定要开始改变你的生活方式，因为这是最后一个好的时机，你要避免真的变成糖尿病，真的变成高血压，或是真的有高血脂的一个阶段。 有些人会用“嗯三高预备军”来称呼代谢症候群的这个状况，所以他就是快要变成三高，但还没有，所以这是一个很好的机会，可以去调整自己的生活习惯。那后面我们来看一些常见的问题跟迷思。第一个是代谢症候群一定是胖的人才会得吗？ 瘦子会不会有可能呢？"], ["S2", "那当然，瘦子也是有可能会有，有些人其实他外表看起来不胖，但是其实他的内脏脂肪也是非常的高，加上饮食不均衡、缺乏运动，就有可能会符合代谢症候群的一个标准哦。那接下来我们来看看第二个迷思。 吃药就能控制代谢症候群，不用改生活习惯吗？"], ["S1", "那其实药物它只能控制某些指标，比如说帮助我们调整血压，帮助我们降血糖。但是一开始为什么血压会升高，为什么血糖会升高？它是一种生活习惯病嘛，所以我们要从源头下手，我们的生活习惯必须要调整。 那你的身体状态才会稳定，才能够改变这样子恶性循环的状态。所以说，药物它可以当做一个辅助，但是要搭配我们生活形态的调整，才能让这些慢性病的代谢不好的问题达到改变。那最后一个，第三个迷思就是说，代谢症候群它会遗传吗？ 家族如果有人有糖尿病或心脏病，是不是会比较容易有这样的状况呢？"], ["S2", "有家族病史的，确实它的风险是比较高的，但是其实生活习惯的影响其实是更大的。换句话说，其实遗传就像一个体质，但会不会被诱发，我们真的也不太清楚。但是很多时刻是取决你的日常生活这个选择。 当你生活习惯越不好，饮食习惯越糟，那你但一坏的一个风险的几率，当然就相对会比较高哦。"], ["S1", "好啦，今天的创造状态很好的自己就到这里啦。这集我们分享了很多关于代谢症候群的小知识，让我们一起避免成为三高预备军。"], ["S2", "对啊，可以帮自己设定觉得做得到的健康目标，例如选择低糖、无糖食物，然后常常站起来动一动，给自己好习惯，身体状况就能越来越好哦。"], ["S1", "现在就按下订阅按钮，这样你就不会错过最新的内容啦。"], ["S2", "也欢迎大家把今天的节目分享给你的朋友，尤其是容易久坐的一个伙伴，或许他们会很感谢你哦。"], ["S1", "如果你有任何问题或主题想知道，欢迎留言。我们会在节目中选择一些问题来回答。这集就到这里，我们下次见喽，拜拜。"], ["S2", "拜拜。"]]},
+    {"id": "e170f7be39eebd61_D0000", "lang": "zh", "dur": "4:44", "dnsmos": 3.1, "audio": "assets/preview/e170f7be39eebd61_D0000.m4a", "speakers": 2, "turns": [["S1", "经常有人问我，我们该在什么时候卖出呢？我对他们说：“为什么你首先想到的是卖出呢？”他们说：“当然是为了获取利润，不卖出我怎么赚钱呢？那只不过是账面利润而已。事实上，从房地产赚到的钱是不用课税的，是免税的收入。”"], ["S2", "我就是想不明白，为什么人们看不到这一点呢？在美国，假如你从股票一类的票据资产获得百分之二十的利润，赚到了一万美元，你要把股票出售的话，应课税率是百分之二十。房地产方面，如果我赚到两万美元的利润， 即使这笔钱是需要课税的，我也能无限期的延迟纳税。也就是说，我不用为我的资本利得支付任何的税款。我那些从现金流和房地产所衍生的收入是被动收入，税率是最低的，可说是最好的收入。资本利得是免税的。"], ["S1", "你可以把用来支付资本收益的税款作为投资用途。相对于其他投资来说，你获得的回报也比较多。"], ["S2", "如果你是B或是I象限的人，进行投资的时候，你还可以利用折旧这个东西。根据现行的税法，政府将补偿你在增建或改建工程所损耗的价值，这就是所谓的折旧费。"], ["S1", "跟他们补偿你在电脑和汽车所耗损的价值差不多，但两者之间还是有点不同。在电脑和汽车方面，他们给你补偿是由于你的电脑和汽车的价格下降；在房地产方面，则刚好相反，他们给你补偿是由于你的房地产价值上升。 只要你没有把这个房地产出售，拥有它的时间越长，你得到的利益就越多。"], ["S2", "我想在这里指出，S和B象限的分别。作为B的我，可以利用房地产获得的折旧费来增加我的利益和收入。根据法律，S或E象限的人却不可以那么做。这就是我喜欢投资房地产的原因。 透过房地产的投资，我有更多不用课税的钱流进了我的口袋。即使我的租金收入和开支是一样多，我得不到任何的收入。再加上房产的价值没有上升，折旧可以让我继续赚取金钱。"], ["S1", "说的对，根据你刚才说的情况，即使租金收入和支出相抵，房地产价值又没有上升，你仍然可以赚到钱。事实上，在这个情况下，政府会给你做出补偿的，罗伯特。我想再也没有其他可以让你从政府那里获得补偿的投资工具了吧？"], ["S2", "是的，多夫刚刚为我们解释了他认为房地产是最好的投资的几个原因，也同时说出了我的心声。我对你的意见深有同感。我总是想不明白，为什么电视节目、报章、杂志、财经杂志提到的大多数是票据资产的消息。 很少报道有关房地产的消息。"], ["S1", "我总觉得，一般的财务计划专家为客户设计财务计划时，比较少涉及到房地产方面的投资。"], ["S2", "他们对房地产好像不太熟悉。"], ["S1", "呃，这是其中的一个原因。第二个原因是房地产没有给他们带来什么好处。如果他们建议客户投资在股票或债券的话，在某些情况下，他们可以获得佣金。相反，客户投资在房地产，并不能给他们带来太多的好处。"], ["S2", "我认为，一个称职的财务计划专家必须具备企业、房地产、票据、资产等各项资产的专业知识，明白他们各项的长处和短处。我们没有说房地产是你唯一的投资项目，它也有缺点。可是，政府给房地产投资者提供了多项的税务宽减优惠。 银行又乐意借钱给投资在房地产的人。以上种种说明了投资房地产的好处。我却认为房地产是非常有趣的投资项目。"], ["S1", "是的，我经常向人们说，如果有人向你提供一些有关金钱的建议，你该问一问自己，这个人是不是做过他向你建议的事情呢？他是不是在这个事情上赚过大钱呢？或者他们是不是透过给别人提供建议而赚大钱呢？ 他的答案可以让你知道他们的建议是否可信。"], ["S2", "许多房地产的经纪人不会投资在房地产，股票经纪人也不会投资在股票，因为他们只是推销员，不是真正的投资者。他们是S象限的人，不是I象限的人。"], ["S1", "我在新地区进行房地产投资时，我只会选用那些本身是投资者的房地产经纪人，因为他们才知道我需要的是什么。"]]},
+    {"id": "7046e4acf414ef0c_D0001", "lang": "en", "dur": "2:51", "dnsmos": 3.26, "audio": "assets/preview/7046e4acf414ef0c_D0001.m4a", "speakers": 2, "turns": [["S1", "My next tip for sounding American is to include an er at the end of your words. Er, this is really typical in American English. So before I explain it any further, let's listen to a sentence that includes this a couple times."], ["S2", "In the letter he wrote, remember to water the flowers. In the letter he wrote, remember to water the flowers."], ["S1", "When my British friend was saying \"water bottle,\" this was the second American sound that he was using—the \"er\" at the end of the word. \"Er, water.\" Don't forget to water the flowers. Remember to water the flowers. And this is going to really test your \"r\" pronunciation. We used it in the previous tip, and now we're using it \"er\" again. You really need to make sure you're. Ours are strong and powerful. Remember to water the flowers. All right, let's listen to that clip one more time, and then we're going to pause, and I want you to say it out loud."], ["S2", "In the letter he wrote, remember to water the flowers."], ["S1", "My fourth and final tip is a specific contrast with British English. It is the ending a r y. Again, we're talking about r because r is essential in English, and it's essential in a lot of different languages. I think oftentimes the r is the most challenging sound. In other languages, because it's so integral. Well, in this case, a r y at the end of words is gonna indicate that in American English, we're gonna pronounce the full word: library, secretary, military. Do you hear that ending? Airy, airy, airy. Library. We're gonna say the full word. Let's listen to a quick sentence that uses a couple of these examples."], ["S2", "At the library, the secretary read a book about the military. At the library, the secretary read a book about the military."], ["S1", "In American English, you're going to pronounce each of the final letters a r y. Military. In British English, they often cut out the a. So instead of military, it would be military. Military. That a is just gone. But in American English, each of those letters are pronounced military airy. So let's listen to this clip one more time, and then I want to pause and let you have a chance to repeat the sentence yourself."], ["S2", "At the library, the secretary read a book about the military."]]},
+    {"id": "dfde7849115c135d_D0002", "lang": "en", "dur": "1:00", "dnsmos": 3.23, "audio": "assets/preview/dfde7849115c135d_D0002.m4a", "speakers": 3, "turns": [["S1", "She was the sister who went unnoticed."], ["S2", "A daffodil might look plain next to a lily, but on its own, there is much to be admired."], ["S1", "Now, her greatest chapter is yet to come."], ["S2", "The most important thing is to be yourself."], ["S1", "From the world of Jane Austen's *Pride and Prejudice* comes a new Britbox original drama."], ["S2", "Mary, you will flourish."], ["S1", "Based on the best-selling novel *The Other Bennett Sister*, now streaming only on BritBox. Watch with a free trial at BritBox.com."], ["S3", "What would you lock away to explain your country to the future? In 1876, as America turned 100, a group of citizens sealed their answers inside a safe meant to be opened a century later. But when the century safe was finally unlocked, what the world saw didn't tell an obvious story. It raised a question. What do the objects we choose to remember reveal about who we really are? This is the Century Safe on a history of the United States in a hundred objects. Find it in the ninety-nine percent invisible feed wherever you get your podcasts."]]},
+    {"id": "f3f228b261d814be_D0000", "lang": "fr", "dur": "2:10", "dnsmos": 3.23, "audio": "assets/preview/f3f228b261d814be_D0000.m4a", "speakers": 3, "turns": [["S1", "Ce podcast, en fait, c'est vraiment l'histoire d'une dizaine d'étudiants en médecine et en humanités qui débarquent au sein de l'Organisation mondiale de la santé et qui se posent en fait une question cruciale : est-ce qu'il est encore possible aujourd'hui de soigner le monde ?"], ["S2", "L'OMS était soumis à de profonds bouleversements sur son organisation et donc on s'était dit que c'était vraiment intéressant d'aller pouvoir leur poser des questions directement sur les modifications qui étaient en train de subir l'institution, de comprendre comment eux percevaient ces modifications et comment ils espéraient que l'OMS en ressortirait. L'an dernier, il y a eu, comme on s'en souvient sans doute, des gros débats autour de l'OMS parce que le budget de l'OMS était fortement remis en cause et on s'est dit que c'était vraiment très intéressant d'aller regarder comment est-ce que l'OMS allait réagir, chacun pouvant étudier ces bouleversements. Depuis sa discipline, on constate tous qu'il y a des bouleversements dans le monde aujourd'hui. La santé mondiale, elle aussi, est complètement bouleversée."], ["S1", "Elle est extrêmement fragile. Il a suffi vraiment d'une seule crise pour révéler toutes ses failles. Nous, on est vraiment arrivé dans le contexte des États-Unis qui se retirent de l'OMS, dans un monde où on se veut de plus en plus interconnecté, où on prône en fait cette santé globale, voir en fait à quel point le retrait d'un seul acteur peut en fait tout chambouler. M'a vraiment interrogé sur ce qu'on pouvait faire avec les outils que l'on a."], ["S3", "Je pense que le podcast nous a permis de croiser nos regards. On vient tous de domaines un petit peu différents. On a une sorte de table ronde un petit peu généralisée en une semaine. Donc, je pense que ce qui m'a marqué le plus, c'est justement la question, le rapport en fait entre schématiquement les pays du Nord et les pays du Sud, et comment est-ce que justement dans une institution comme l'OMS, qui est une grande promesse, qui est une promesse finalement de mise en commun, comment est-ce qu'on joue avec ces inégalités de fond, ces inégalités structurelles?"], ["S2", "Donc c'est très important pour l'école d'avoir des médecins qui permettent de réfléchir à ce grave problème général qui est les évolutions de la santé aujourd'hui dans le monde contemporain."], ["S1", "Je pense que ce podcast va vraiment permettre de donner aux auditeurs une plongée très très sincère et honnête et simple de quelques étudiants en médecine qui sont venus dans les coulisses de l'Organisation mondiale de la santé. Peut-être permettre en fait une compréhension claire de ce qui se passe, des enjeux contemporains, ne pas seulement être confronté à de grands discours, à de grandes statistiques, mais vraiment en fait voir et entendre la voix des personnes qui vivent ces changements-là au quotidien."]]},
+    {"id": "b54d349910e9df73_D0006", "lang": "hi", "dur": "1:06", "dnsmos": 3.08, "audio": "assets/preview/b54d349910e9df73_D0006.m4a", "speakers": 2, "turns": [["S1", "युसूफ, तुम जरा बाहर जाओ।"], ["S2", "ठीक है सर। बाबा सब ठीक तो है।"], ["S1", "बेटा तुम््हाारी बीवी करना क चहती ह क्या तुम दोनो मिल कर मुे पागल करना चहते हो"], ["S2", "लेकिन लेकिन बाबा घर में कुछ हुआ है क्या? उसने फिर कुछ किया?"], ["S1", "फिर से मेरी बात सुनो। तुम्हारी बीवी हमेशा कुछ न कुछ गड़बड़ करती है क्योंकि ये उसकी आदत है और वो अपनी आदत के हाथों मजबूर है। वो कुछ गलत करे तो पर्दे डालते उसपे तो वो आज हमारे हॉस्पिटल जाकर जाली रिपोर्ट बनाने का कह रही थी डॉक्टर को।"], ["S2", "कौन सी रिपोर्ट बाबा?"], ["S1", "शायद कोई छुट्टी कैंसिल करवानी थी उसे मैं पूरी बात समझ नहीं सका।"], ["S2", "अरे हाँ जापान की ट्रिप के पैसे वापस लेने होंगे उसको बाबा आप गलत मत समझे खुदा के लिए"], ["S1", "ये पहली बार नहीं बार बार ऐसा होता है।"], ["S2", "मैं समझता हूँ बाबा मगर वो मेरी मदद करना चाहती है।"], ["S1", "बेटा ऐसे मदद नहीं होती। हमने आज तक कौन सा गलत काम किया है? हम ज़िंदगी भर गलत कामों से भागते रहे और वो हमसे गलत काम करवाना चाहती। अपनी बीवी से कहो आइन्दा वो किसी मामले में मदाखलत ना करे। सुना तुमने? सुन लिया ज़ल्ला।"], ["S2", "सुन लिया बाबा।"], ["S1", "आज तो हद ही करते."]]},
+  ],
+};
+const LANG_NAMES = { zh: "Chinese", en: "English", de: "German", ja: "Japanese", ar: "Arabic", ko: "Korean", es: "Spanish", fr: "French", ru: "Russian", hi: "Hindi" };
+const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const withNV = (t) => esc(t).replace(/\[([^\]]+)\]/g, '<span class="nv">[$1]</span>');
+const spkColor = (sp) => VOICES[(parseInt(sp.replace(/\D/g, ""), 10) - 1) % VOICES.length] || "var(--ink-3)";
+
+function renderPreview(view) {
+  document.querySelectorAll("#pv-tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === view)));
+  const list = document.getElementById("pv-list");
+  list.innerHTML = "";
+  list.scrollTop = 0;
+  const hasAnn = PREVIEW[view].some((ex) => ex.instruction && ex.instruction.length);
+  document.getElementById("preview").classList.toggle("pv-noann", !hasAnn);
+  PREVIEW[view].forEach((ex, i) => {
+    const row = document.createElement("div");
+    row.className = "pv-row";
+    row.style.animationDelay = i * 50 + "ms";
+    const chips = [LANG_NAMES[ex.lang] || ex.lang, ex.dur || "—:—", ex.speakers ? `${ex.speakers} speakers` : "1 speaker"];
+    if (ex.dnsmos) chips.push(`DNSMOS ${ex.dnsmos.toFixed(2)}`);
+    let text;
+    if (ex.turns) {
+      text = ex.turns.map(([sp, t]) => `<div class="pv-turn"><span class="pv-spk" style="--c:${spkColor(sp)}">${sp}</span><span>${withNV(t)}</span></div>`).join("");
+    } else {
+      text = withNV(ex.text);
+    }
+    let ann;
+    if (!ex.instruction || !ex.instruction.length) {
+      ann = '<span class="pv-none">No instruction annotation</span>';
+    } else if (typeof ex.instruction === "string") {
+      ann = `<div><i>${esc(ex.instruction)}</i></div>`;
+    } else {
+      ann = ex.instruction.map(([k, t]) => `<div><span class="pv-t">${esc(k || "·")}</span><i>${esc(t)}</i></div>`).join("");
+    }
+    row.innerHTML = `
+      <div><div class="pv-id">${esc(ex.id)}</div><div class="pv-meta">${chips.map((c) => `<span class="pv-chip">${c}</span>`).join("")}</div></div>
+      <div class="pv-body"><div class="pv-text">${text}</div></div>
+      <div class="pv-ann"${hasAnn ? "" : " hidden"}><div class="pv-ann-label">${view === "dialogue" ? "Per-speaker instruction" : view === "long" ? "Instruction (timestamped)" : "Instruction"}</div>${ann}</div>`;
+    const body = row.querySelector(".pv-body");
+    body.insertBefore(buildPlayer(ex.audio), body.firstChild);
+    list.appendChild(row);
+    // Clamp long transcripts with a toggle
+    const tx = row.querySelector(".pv-text");
+    tx.classList.add("is-clamped");
+    if (tx.scrollHeight > tx.clientHeight + 2) {
+      const more = document.createElement("button");
+      more.className = "pv-more"; more.type = "button"; more.textContent = "Show full transcript";
+      more.addEventListener("click", () => {
+        const open = tx.classList.toggle("is-clamped");
+        more.textContent = open ? "Show full transcript" : "Show less";
+      });
+      body.appendChild(more);
+    } else {
+      tx.classList.remove("is-clamped");
+    }
+  });
+}
+const pvTabs = document.getElementById("pv-tabs");
+pvTabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) renderPreview(b.dataset.view); });
+arrowKeys(pvTabs, "view", renderPreview);
+renderPreview("short");
+
+/* ------------------------------------------------------------------
+   Misc
+   ------------------------------------------------------------------ */
+document.getElementById("copy-bib").addEventListener("click", async (e) => {
+  try { await navigator.clipboard.writeText(document.getElementById("bibtex-text").textContent); e.target.textContent = "Copied"; }
+  catch { e.target.textContent = "Select and copy"; }
+  setTimeout(() => { e.target.textContent = "Copy"; }, 1600);
+});
+const nav = document.querySelector(".nav");
+window.addEventListener("scroll", () => nav.classList.toggle("is-stuck", window.scrollY > 8), { passive: true });
+
+function rerenderAll() {
+  hero = renderScore(heroSvg, heroCfg); paintHero(heroT);
+  renderViews();
+}
+let lastW = window.innerWidth;
+window.addEventListener("resize", debounce(() => {
+  if (window.innerWidth === lastW) return;
+  lastW = window.innerWidth; rerenderAll();
+}, 150));
+// Web fonts change the text metrics used for label collision checks.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(rerenderAll);
+})();
+</script>
+</body>
+</html>
