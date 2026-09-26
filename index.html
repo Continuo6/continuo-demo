@@ -134,7 +134,6 @@ figcaption b { color: var(--ink); }
 .sc-label.is-active { fill: var(--ink); }
 .sc-dir { font-family: var(--serif); font-style: italic; font-size: 15px; fill: var(--ink); }
 .sc-nv { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-2); }
-.sc-hairpin { stroke: var(--ink); stroke-width: 1.2; fill: none; }
 .sc-ghost { fill: var(--ghost); }
 .sc-turn { transition: opacity .2s; }
 .sc-playhead line { stroke: var(--ink); stroke-width: 1.25; }
@@ -357,7 +356,7 @@ figcaption b { color: var(--ink); }
       </div>
       <svg class="score-svg is-scrubbable" id="hero-score" role="img" aria-label="Illustrative score of a thirty-minute, four-speaker dialogue. Each staff is one speaker; turns appear as waveforms, with style instructions above and nonverbal tags below."></svg>
     </div>
-    <figcaption><b>Figure 1.</b> A long-form dialogue drawn as a score (illustrative). Each staff is one speaker and the waveform marks who holds the floor. Italic markings are natural-language style instructions, hairpins mark loudness changes, and bracketed tags are nonverbal vocalizations (NV). Hover to scrub.</figcaption>
+    <figcaption><b>Figure 1.</b> A long-form dialogue drawn as a score (illustrative). Each staff is one speaker and the waveform marks who holds the floor. Italic markings are natural-language style instructions, and bracketed tags are nonverbal vocalizations (NV). Hover to scrub.</figcaption>
   </figure>
 </header>
 
@@ -601,15 +600,6 @@ function renderScore(svg, cfg) {
     r.dirs.push([px, px + w]);
   });
 
-  // Hairpins (loudness changes), only where no direction is written
-  cfg.hairpins.forEach((hp) => {
-    const r = rows[hp.s], y = r.y0 + dirBand / 2 + 1, x0 = x(hp.t0), x1 = x(hp.t1), o = 4.5;
-    if (x1 - x0 < 24 || collides(r.dirs, x0, x1, 8)) return;
-    const d = hp.type === "cresc" ? `M${x1},${y - o}L${x0},${y}L${x1},${y + o}` : `M${x0},${y - o}L${x1},${y}L${x0},${y + o}`;
-    el("path", { class: "sc-hairpin", d }, r.g);
-    r.dirs.push([x0, x1]);
-  });
-
   // NV marks
   cfg.nv.forEach((n) => {
     const r = rows[n.s], px = x(n.t), lx = px - 3;
@@ -686,11 +676,6 @@ const heroCfg = {
     { s: 1, t: turnAfter(heroTurns, 1, 1150), text: "warmer, quieter" },
     { s: 2, t: turnAfter(heroTurns, 2, 1380), text: "amused" },
     { s: 3, t: turnAfter(heroTurns, 3, 1500), text: "firm, louder" },
-  ],
-  hairpins: [
-    { s: 0, t0: 470, t1: 700, type: "cresc" },
-    { s: 1, t0: 1480, t1: 1700, type: "dim" },
-    { s: 2, t0: 700, t1: 900, type: "cresc" },
   ],
   nv: [
     { s: 1, t: turnAfter(heroTurns, 1, 70, 0.4), text: "[laughter]" },
