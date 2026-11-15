@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Continuo: Long-Form Speech Dataset</title>
+<meta name="description" content="Continuo: a 229K-hour, 41-language dataset for controllable long-form speech generation, with a 23.3-hour benchmark of recordings up to 30 minutes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&family=Source+Sans+3:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ------------------------------------------------------------------
+   Tokens
+   ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+  --bg:     #FFFFFF;
+  --panel:  #F6F8FA;
+  --tint:   #EEF4FA;
+  --ink:    #1B1F24;
+  --ink-2:  #454E57;
+  --ink-3:  #6E7781;
+  --rule:   #D8DEE4;
+  --staff:  #D0D7DE;
+  --ghost:  #B8C0C8;
+  --link:   #2D6AA6;
+
+  /* Speaker voices: S1 blue and S2 green follow the paper's Figure 1.
+     Validated for CVD separation; every staff also carries a text label. */
+  --s1: #2D6AA6;
+  --s2: #48A06A;
+  --s3: #C27A2C;
+  --s4: #9A5BB0;
+
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans:  "Source Sans 3", "Source Sans Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:  "Source Code Pro", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --wrap: 1080px;
+  --col: 860px;
+  --gutter: 24px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.65;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; border-radius: 4px; }
+b, strong { font-weight: 600; }
+
+.wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 var(--gutter); }
+.col  { max-width: var(--col); margin-left: auto; margin-right: auto; }
+.mono { font-family: var(--mono); font-size: 0.82em; }
+.sc   { font-variant-caps: small-caps; letter-spacing: 0.02em; }
+.just { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
+
+/* ------------------------------------------------------------------
+   Nav
+   ------------------------------------------------------------------ */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid transparent; transition: border-color .3s;
+}
+.nav.is-stuck { border-bottom-color: var(--rule); }
+.nav-inner { display: flex; align-items: center; gap: 24px; height: 54px; }
+.brand { font-weight: 600; font-size: 19px; color: var(--ink); text-decoration: none; }
+.nav-links { display: flex; gap: 22px; margin-left: auto; font-family: var(--sans); font-size: 15px; }
+.nav-links a { color: var(--ink-2); text-decoration: none; }
+.nav-links a:hover { color: var(--ink); }
+
+/* ------------------------------------------------------------------
+   Masthead
+   ------------------------------------------------------------------ */
+.masthead { text-align: center; padding: 56px 0 0; }
+.venue { font-family: var(--sans); font-size: 14px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin: 0; }
+.title {
+  font-weight: 600; font-size: clamp(30px, 4.3vw, 46px); line-height: 1.16; letter-spacing: -0.012em;
+  max-width: 21em; margin: 14px auto 0;
+}
+.authors { font-size: 21px; margin: 26px 0 0; }
+.affil { font-size: 16.5px; color: var(--ink-2); margin: 4px 0 0; font-style: italic; }
+.links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 26px 0 0; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 18px; border-radius: 999px;
+  background: var(--ink); color: #fff; text-decoration: none;
+  font-family: var(--sans); font-size: 15.5px; font-weight: 600;
+  transition: background .2s;
+}
+.btn:hover { background: var(--link); }
+.btn svg { width: 17px; height: 17px; flex: none; }
+.btn .emoji { font-size: 16px; line-height: 1; }
+.btn[data-pending]::after { content: "soon"; font-size: 11.5px; font-weight: 500; opacity: .6; margin-left: -1px; }
+.btn[data-gated] { cursor: default; }
+.btn[data-gated]:hover { background: var(--ink); }
+.btn[data-gated]::after { content: "gated"; font-size: 11.5px; font-weight: 500; opacity: .6; margin-left: -1px; }
+
+/* ------------------------------------------------------------------
+   Sections, figures, captions
+   ------------------------------------------------------------------ */
+.section { padding: 64px 0 0; }
+.h2 { font-size: 30px; font-weight: 600; line-height: 1.2; text-align: center; margin: 0 0 22px; letter-spacing: -0.005em; }
+.h3 { font-size: 20px; font-weight: 600; line-height: 1.3; margin: 0; }
+p { margin: 0 0 16px; }
+
+.fig { margin: 30px 0 34px; }
+.panel { background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; padding: 20px 22px; }
+figcaption { font-size: 15.5px; line-height: 1.55; color: var(--ink-2); margin: 12px 0 0; text-align: left; }
+figcaption b { color: var(--ink); }
+/* .fig / figcaption set their own margins after .col, which cancels its centering */
+.fig.col, figcaption.col { margin-left: auto; margin-right: auto; }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 20px; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.panel-head .label { font-family: var(--sans); font-size: 14px; color: var(--ink-3); }
+
+/* Score (Figure 1) */
+.readout { display: flex; gap: 14px; align-items: baseline; }
+.readout-time { font-family: var(--mono); font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.readout-now { font-style: italic; font-size: 17px; color: var(--ink); min-width: 12em; text-align: right; }
+.readout-now b { font-family: var(--mono); font-style: normal; font-weight: 500; font-size: 12.5px; margin-right: 6px; }
+.score-svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
+.is-scrubbable { cursor: ew-resize; }
+.sc-staff { stroke: var(--staff); stroke-width: 1; shape-rendering: crispEdges; }
+.sc-tick { stroke: var(--ghost); stroke-width: 1; shape-rendering: crispEdges; }
+.sc-tick--major { stroke: var(--ink-3); }
+.sc-time { font-family: var(--mono); font-size: 11px; fill: var(--ink-3); }
+.sc-label { font-family: var(--mono); font-size: 12px; font-weight: 500; fill: var(--ink-2); }
+.sc-label.is-active { fill: var(--ink); }
+.sc-dir { font-family: var(--serif); font-style: italic; font-size: 15px; fill: var(--ink); }
+.sc-nv { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-2); }
+.sc-ghost { fill: var(--ghost); }
+.sc-turn { transition: opacity .2s; }
+.sc-playhead line { stroke: var(--ink); stroke-width: 1.25; }
+.sc-playhead path { fill: var(--ink); }
+
+/* Segmented control */
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--bg); }
+.seg button {
+  appearance: none; border: 0; border-right: 1px solid var(--rule); background: transparent; cursor: pointer;
+  font: 500 14.5px var(--sans); color: var(--ink-2); padding: 7px 14px; transition: background .2s, color .2s;
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { color: var(--ink); background: var(--panel); }
+.seg button[aria-selected="true"] { background: var(--ink); color: #fff; }
+
+/* Three views (Figure 3) */
+.views-grid { display: grid; grid-template-columns: 1fr 250px; gap: 28px; margin-top: 16px; align-items: start; }
+.views-legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 0; font-family: var(--sans); font-size: 13.5px; color: var(--ink-2); }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.vs-bar { transition: opacity .35s ease; }
+.vs-bracket { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+.vs-bracket-label { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+.vs-axis { font-family: var(--mono); font-size: 11px; fill: var(--ink-3); }
+.vp-name { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+.vp-rule { font-size: 15px; line-height: 1.5; color: var(--ink-2); margin: 0 0 12px; }
+.vp-stats { margin: 0; font-family: var(--sans); font-size: 14px; }
+.vp-stats div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-top: 1px solid var(--rule); }
+.vp-stats dt { color: var(--ink-2); }
+.vp-stats dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+
+/* Training data preview */
+.pv-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; }
+.pv-head a { font-family: var(--sans); font-size: 14.5px; font-weight: 600; text-decoration: none; }
+.pv-head a[data-pending]::after { content: " (soon)"; font-weight: 400; color: var(--ink-3); }
+.pv-cols, .pv-row { display: grid; grid-template-columns: 170px 1fr 230px; gap: 20px; }
+.pv-cols { font-family: var(--sans); font-size: 14px; font-weight: 600; padding: 8px 4px; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.pv-list {
+  border-bottom: 2px solid var(--ink);
+  max-height: min(640px, 72vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable;
+  /* scroll shadows: the white covers scroll with the content, the soft shadows stay put */
+  background:
+    linear-gradient(var(--bg) 30%, rgba(255,255,255,0)) top / 100% 28px no-repeat local,
+    linear-gradient(rgba(255,255,255,0), var(--bg) 70%) bottom / 100% 28px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgba(27,31,36,.14), transparent) top / 100% 10px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgba(27,31,36,.14), transparent) bottom / 100% 10px no-repeat scroll;
+}
+.pv-list:focus-visible { outline-offset: -2px; }
+.pv-row { padding: 16px 4px; border-top: 1px solid var(--rule); animation: pv-in .35s ease both; }
+.pv-row:first-child { border-top: 0; }
+@keyframes pv-in { from { opacity: 0; transform: translateY(6px); } }
+.pv-id { font-family: var(--mono); font-size: 11.5px; color: var(--ink); word-break: break-all; }
+.pv-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.pv-chip { font-family: var(--sans); font-size: 12.5px; color: var(--ink-2); background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 0 6px; line-height: 20px; }
+.pv-body .player { max-width: 320px; margin-bottom: 10px; }
+.pv-text { font-size: 15.5px; line-height: 1.6; color: var(--ink); }
+.pv-text.is-clamped { max-height: 4.8em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 60%, transparent); mask-image: linear-gradient(#000 60%, transparent); }
+.pv-turn { display: grid; grid-template-columns: 34px 1fr; gap: 6px; }
+.pv-spk { font-family: var(--mono); font-size: 12px; font-weight: 500; padding-top: 3px; white-space: nowrap; }
+.pv-spk::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c); margin-right: 5px; vertical-align: 1px; }
+.pv-more { appearance: none; border: 0; background: none; padding: 0; margin-top: 4px; cursor: pointer; font: 600 13.5px var(--sans); color: var(--link); }
+.nv { font-family: var(--mono); font-size: 0.8em; font-weight: 500; background: var(--tint); border-radius: 3px; padding: 0 3px; white-space: nowrap; }
+.pv-ann { font-size: 15px; line-height: 1.5; }
+.pv-ann-label { font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.pv-ann i { color: var(--ink); white-space: pre-line; }
+.pv-nv-counts { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.pv-nv-seg { display: grid; grid-template-columns: 84px 28px 1fr; gap: 4px; font-size: 13px; line-height: 1.5; padding: 3px 0; border-top: 1px solid var(--rule); }
+.pv-nv-seg .pv-t { margin: 0; padding-top: 1px; }
+.pv-nv-seg .pv-spk { font-size: 11.5px; padding-top: 2px; }
+.pv-nv-seg .pv-spk::before { display: none; }
+.pv-ann-body.is-clamped { max-height: 9em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 60%, transparent); mask-image: linear-gradient(#000 60%, transparent); }
+.pv-ann .pv-t { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-right: 6px; }
+.pv-ann div + div { margin-top: 4px; }
+.pv-none { color: var(--ink-3); font-size: 14.5px; }
+.pv-noann .pv-cols, .pv-noann .pv-row { grid-template-columns: 184px 1fr; }
+.pv-noann .pv-cols span:nth-child(3) { display: none; }
+
+/* Results table (booktabs) */
+.tscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.btab { width: 100%; border-collapse: collapse; font-size: 15.5px; font-variant-numeric: lining-nums tabular-nums; }
+.btab caption { caption-side: top; text-align: left; font-size: 15.5px; line-height: 1.55; color: var(--ink-2); padding: 0 0 10px; }
+.btab caption b { color: var(--ink); }
+.btab th, .btab td { padding: 6px 10px; text-align: center; white-space: nowrap; }
+.btab th:first-child, .btab td:first-child { text-align: left; padding-left: 4px; }
+.btab thead tr:first-child th { border-top: 2px solid var(--ink); padding-top: 8px; }
+.btab thead tr:last-child th, .btab thead th[rowspan] { border-bottom: 1px solid var(--ink); }
+.btab th { font-weight: 600; }
+.btab thead .grp { background: linear-gradient(var(--ink-3), var(--ink-3)) bottom center / calc(100% - 14px) 1px no-repeat; }
+.btab thead .sub { font-weight: 500; color: var(--ink-2); font-size: 14.5px; }
+.btab tbody tr:last-child td { border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
+.btab tr.mid td { border-top: 1px solid var(--ink); }
+.btab tr.ours td { background: var(--tint); }
+.btab tr.ours td:first-child { font-weight: 600; }
+.btab tr.ref td { color: var(--ink-3); }
+.btab .best { font-weight: 700; }
+.btab .second { text-decoration: underline; text-underline-offset: 3px; }
+.results-head { display: flex; justify-content: center; margin: 0 0 16px; }
+.results-note { font-size: 15px; color: var(--ink-2); margin: 10px 0 0; }
+
+/* Audio samples */
+.sample-group { margin-top: 36px; }
+.sample-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 10px; }
+.sample-head span { font-family: var(--sans); font-size: 14px; color: var(--ink-3); }
+.atab { width: 100%; border-collapse: collapse; font-size: 15px; }
+.atab th, .atab td { padding-left: 8px; padding-right: 8px; }
+.atab th { font-family: var(--sans); font-weight: 600; font-size: 14px; text-align: left; padding-top: 8px; padding-bottom: 8px; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); white-space: nowrap; }
+.atab td { padding-top: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+.atab tr:last-child td { border-bottom: 2px solid var(--ink); }
+.atab td.txt { color: var(--ink-2); line-height: 1.55; }
+.atab td.txt > .txt-in { position: sticky; left: 8px; max-width: calc(100vw - 2 * var(--gutter) - 16px); }
+.atab tr.trow td { border-bottom: 0; padding-bottom: 6px; padding-top: 16px; }
+.atab tr.trow + tr td { padding-top: 6px; padding-bottom: 16px; }
+.atab td.txt i { color: var(--ink); }
+.atab td.aud { min-width: 118px; }
+.atab.has-grp tr.grp th { border-bottom: 0; padding-bottom: 0; text-align: center; }
+.atab.has-grp tr.grp th:not(:empty) { box-shadow: inset 0 -1px 0 var(--rule); }
+.atab.has-grp tr:not(.grp) th { border-top: 0; }
+.atab td.multi { min-width: 150px; }
+.atab .sx { margin-top: 4px; max-height: 20em; overflow-y: auto; overscroll-behavior: contain; }
+.atab .sx .turn + .turn, .atab .px .turn + .turn { margin-top: 3px; }
+.atab .pbox { margin: 8px 0 14px; padding: 8px 12px 10px; background: var(--panel); border-left: 3px solid var(--rule); border-radius: 0 4px 4px 0; font-size: 0.93em; }
+.atab .pbox .sx-label { margin-top: 0; }
+.atab .px { margin-top: 2px; }
+.atab .sx.is-clamped { max-height: 6.4em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 60%, transparent); mask-image: linear-gradient(#000 60%, transparent); }
+.atab .sx-label { margin-top: 8px; margin-bottom: 2px; font-family: var(--sans); font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
+.atab .multi-item { display: grid; grid-template-columns: 22px 1fr; align-items: center; gap: 4px; }
+.atab .multi-item + .multi-item { margin-top: 8px; }
+#samples-root { max-width: var(--wrap); margin: 0 auto; }
+.player { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; }
+.player button {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--ink); background: var(--bg);
+  display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0;
+}
+.player button:hover:not(:disabled) { background: var(--ink); color: #fff; }
+.player button:disabled { border-color: var(--staff); color: var(--ghost); cursor: not-allowed; }
+.player button svg { width: 11px; height: 11px; }
+.ptrack { height: 4px; border-radius: 2px; background: var(--rule); position: relative; cursor: pointer; }
+.ptrack span { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ink); border-radius: 2px; }
+.player.is-empty .ptrack { cursor: default; background: repeating-linear-gradient(90deg, var(--rule) 0 4px, transparent 4px 7px); }
+.ptime { font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; }
+
+/* BibTeX */
+.cite { position: relative; }
+.cite pre {
+  margin: 0; padding: 20px 22px; border-radius: 8px; background: var(--panel); border: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 13.5px; line-height: 1.65; overflow-x: auto; color: var(--ink);
+}
+.copy {
+  position: absolute; top: 12px; right: 12px; font: 600 13px var(--sans); color: var(--ink);
+  background: var(--bg); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 12px; cursor: pointer;
+}
+.copy:hover { border-color: var(--ink); }
+.footer { margin-top: 72px; padding: 28px 0 44px; border-top: 1px solid var(--rule); text-align: center; font-family: var(--sans); font-size: 14px; color: var(--ink-3); }
+.footer p { margin: 0; }
+
+/* Entrance */
+.rise { opacity: 0; transform: translateY(12px); animation: rise .9s cubic-bezier(.2,.7,.2,1) forwards; }
+.rise-2 { animation-delay: .1s; } .rise-3 { animation-delay: .2s; } .rise-4 { animation-delay: .32s; } .rise-5 { animation-delay: .46s; }
+@keyframes rise { to { opacity: 1; transform: none; } }
+
+/* ------------------------------------------------------------------
+   Responsive
+   ------------------------------------------------------------------ */
+@media (max-width: 960px) {
+  .nav-links { display: none; }
+  .views-grid { grid-template-columns: 1fr; gap: 18px; }
+  .pv-cols { display: none; }
+  .pv-row, .pv-noann .pv-row { grid-template-columns: 1fr; gap: 10px; }
+  .pv-list { border-top: 2px solid var(--ink); }
+}
+@media (max-width: 640px) {
+  :root { --gutter: 16px; }
+  body { font-size: 17px; }
+  .just { text-align: left; }
+  .masthead { padding-top: 40px; }
+  .section { padding-top: 52px; }
+  .h2 { font-size: 26px; }
+  .panel { padding: 14px; }
+  .readout-now { min-width: 0; text-align: left; }
+  .btab { font-size: 14.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .rise { animation: none; opacity: 1; transform: none; }
+  .vs-bar, .sc-turn, .seg button, .btn { transition: none; }
+  .pv-row { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<!--
+  LINKS TO FILL IN: search for data-pending. Replace href="#" with the real URL
+  and delete the data-pending attribute to remove the "soon" label.
+  AUDIO SAMPLES: the SAMPLES array near the end of the script; audio in assets/samples/.
+-->
+
+<header class="nav" id="top">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top">Continuo</a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#abstract">Abstract</a>
+      <a href="#dataset">Dataset</a>
+      <a href="#preview">Data Preview</a>
+      <a href="#instructions">Instructions</a>
+      <a href="#nv">NV Tags</a>
+      <a href="#samples">Samples</a>
+      <a href="#results">Results</a>
+      <a href="#bibtex">BibTeX</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ============================================================ MASTHEAD -->
+<header class="masthead">
+  <p class="venue rise">Under review at ICLR 2027</p>
+  <h1 class="title rise rise-2">Continuo: A Large-Scale Dataset for Controllable Long-Form Speech Generation</h1>
+  <p class="authors rise rise-3">Anonymous Authors</p>
+  <p class="affil rise rise-3">Paper under double-blind review</p>
+  <div class="links rise rise-4">
+    <a class="btn" href="https://github.com/Continuo6/Continuo-Pipe" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      Code
+    </a>
+    <span class="btn" data-gated><span class="emoji" aria-hidden="true">🤗</span> Testset</span>
+    <a class="btn" href="#samples">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>
+      Audio Samples
+    </a>
+  </div>
+
+  <!-- Teaser: Figure 1 -->
+  <figure class="fig rise rise-5" style="margin-top:40px; text-align:left">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="label">Continuo-Dialogue example · 4 speakers · 30 min, one continuous recording</span>
+        <span class="readout" aria-live="off">
+          <span class="readout-now" id="score-now"></span>
+          <span class="readout-time" id="score-time">0:00 / 30:00</span>
+        </span>
+      </div>
+      <svg class="score-svg is-scrubbable" id="hero-score" role="img" aria-label="Illustrative score of a thirty-minute, four-speaker dialogue. Each staff is one speaker; turns appear as waveforms, with style instructions above and nonverbal tags below."></svg>
+    </div>
+    <figcaption><b>Figure 1.</b> A long-form dialogue drawn as a score (illustrative). Each staff is one speaker and the waveform marks who holds the floor. Italic markings are natural-language style instructions, and bracketed tags are nonverbal vocalizations (NV). Hover to scrub.</figcaption>
+  </figure>
+</header>
+
+<!-- ============================================================ ABSTRACT -->
+<section class="section col" id="abstract">
+  <h2 class="h2">Abstract</h2>
+  <p class="just">
+    Generating long-form speech requires models to keep content, speaker identity, turn-taking, and expressive style consistent over time.
+    Yet most open training corpora contain examples lasting only tens of seconds and open long-form benchmarks cover at most two speakers per recording.
+    We introduce <span class="sc">Continuo</span>, a 229K-hour multilingual dataset for controllable long-form speech generation.
+    From in-the-wild data, <span class="sc">Continuo</span> constructs short utterances, single-speaker long-form speech, and multi-speaker dialogues, preserving transcripts, speaker identities, pauses, and acoustic transitions.
+    Examples longer than five minutes account for 50.0% of single-speaker long-form hours and 66.8% of dialogue hours.
+    To support expressive control, <span class="sc">Continuo</span> provides natural language instructions for 4.77M examples and nonverbal-vocalization tags for 933K examples.
+    We also introduce <span class="sc">Continuo</span>-testset, 23 hours of bilingual recordings of up to 30 minutes and four speakers, each speaker paired with reference audio.
+    We train autoregressive (AR) and non-autoregressive (NAR) models on <span class="sc">Continuo</span>.
+    Our 0.6B-backbone NAR model achieves the lowest Chinese CER and English WER on TTSD-Eval (5.27%/9.93%) among compared systems, while our AR model is on par with Qwen3-TTS-12Hz-VD on InstructTTSEval (zh/en: 76.2/78.3 vs. 77.1/77.9).
+    These results validate <span class="sc">Continuo</span> as a comprehensive data foundation for long-form speech generation and minute-scale expressive control.
+  </p>
+</section>
+
+<!-- ============================================================= DATASET -->
+<section class="section" id="dataset">
+  <div class="col">
+    <h2 class="h2"><span class="sc">Continuo</span> Dataset</h2>
+    <p class="just"><span class="sc">Continuo</span>-Pipe turns in-the-wild recordings into three views that share the same source audio. Long-form views keep the continuous recording, including native pauses and transitions between speakers, instead of concatenating trimmed clips. Annotated subsets add natural-language style instructions and NV tags placed among the spoken words.</p>
+  </div>
+  <figure class="fig">
+    <div class="panel"><img src="assets/pipeline.png" alt="Continuo-Pipe overview: data construction (speech enhancement, diarization, transcription, merge), additional annotation (instruction and NV annotation), and the three resulting example types." loading="lazy"></div>
+    <figcaption class="col"><b>Figure 2.</b> Overview of <span class="sc">Continuo</span>-Pipe. Recordings are enhanced, diarized, transcribed, and merged; segments are annotated with style instructions and NV tags, then reassembled with speaker and timing information into long-form speech and dialogue examples.</figcaption>
+  </figure>
+  <figure class="fig col">
+    <div class="panel">
+      <div class="seg" role="tablist" aria-label="Dataset view" id="views-tabs">
+        <button role="tab" aria-selected="true" data-view="short">Short utterance</button>
+        <button role="tab" aria-selected="false" data-view="long">Single-speaker long-form</button>
+        <button role="tab" aria-selected="false" data-view="dialogue">Multi-speaker dialogue</button>
+      </div>
+      <div class="views-grid">
+        <div>
+          <svg id="views-svg" class="score-svg" role="img" aria-label="A twelve-minute source recording with two speakers. Brackets mark the examples extracted for the selected view."></svg>
+          <div class="views-legend">
+            <span class="key"><i style="background:var(--s1)"></i>Speaker 1</span>
+            <span class="key"><i style="background:var(--s2)"></i>Speaker 2</span>
+            <span class="key"><svg width="22" height="10" aria-hidden="true"><path d="M1 9V2h20v7" class="vs-bracket"/></svg>Extracted example</span>
+          </div>
+        </div>
+        <div aria-live="polite">
+          <p class="vp-name" id="vp-name"></p>
+          <p class="vp-rule" id="vp-rule"></p>
+          <dl class="vp-stats" id="vp-stats"></dl>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Figure 3.</b> Three views cut from one illustrative 12-minute source recording, with the size of each view in <span class="sc">Continuo</span>. After deduplication, the corpus holds 229,388 hours across 41 languages.</figcaption>
+  </figure>
+  <div class="col">
+    <p class="just"><b><span class="sc">Continuo</span>-testset.</b> 118 human-verified Chinese and English recordings (23.3 h): 42 single-speaker long-form cases and 76 dialogues with 2–4 speakers, up to 30 min each. Every case provides a speaker-attributed script and reference audio for each speaker, and the whole script must be synthesized as a single recording. The testset is gated.</p>
+  </div>
+</section>
+
+<!-- ============================================================= PREVIEW -->
+<section class="section col" id="preview">
+  <h2 class="h2">Training Data Preview</h2>
+  <p class="just">Examples from each view of <span class="sc">Continuo</span>, drawn from the training set with test-set recordings excluded. Long-form and dialogue examples are continuous recordings that keep native pauses and turn-taking; dialogue transcripts are speaker-attributed.</p>
+  <div class="pv-head">
+    <div class="seg" role="tablist" aria-label="Training data view" id="pv-tabs">
+      <button role="tab" aria-selected="true" data-view="short">Short</button>
+      <button role="tab" aria-selected="false" data-view="long">Long</button>
+      <button role="tab" aria-selected="false" data-view="dialogue">Dialogue</button>
+    </div>
+    <a href="#" data-pending>Browse the full dataset on 🤗 Hugging Face</a>
+  </div>
+  <div class="pv-cols" aria-hidden="true"><span>Example</span><span>Audio &amp; transcript</span><span>Annotation</span></div>
+  <div class="pv-list" id="pv-list" aria-live="polite" tabindex="0" aria-label="Training data examples (scrollable)"></div>
+</section>
+
+<!-- ================================================== INSTRUCTION PREVIEW -->
+<section class="section col" id="instructions">
+  <h2 class="h2">Instruction Data Preview</h2>
+  <p class="just">Examples from the instruction-annotated subsets of <span class="sc">Continuo</span>, each paired with its natural-language style instruction in Chinese or English. Instructions take one of four forms: an acoustic-parameter specification (APS), a descriptive-style directive (DSD), a role-play direction (RP), or a free-form voice and scene description. Long-form instructions can describe how attributes change over the recording; dialogue instructions are given per speaker.</p>
+  <div class="pv-head">
+    <div class="seg" role="tablist" aria-label="Instruction data view" id="ins-tabs">
+      <button role="tab" aria-selected="true" data-view="short">Short</button>
+      <button role="tab" aria-selected="false" data-view="long">Long</button>
+      <button role="tab" aria-selected="false" data-view="dialogue">Dialogue</button>
+    </div>
+  </div>
+  <div class="pv-cols" aria-hidden="true"><span>Example</span><span>Audio &amp; transcript</span><span>Instruction</span></div>
+  <div class="pv-list" id="ins-list" aria-live="polite" tabindex="0" aria-label="Instruction data examples (scrollable)"></div>
+</section>
+
+<!-- =========================================================== NV PREVIEW -->
+<section class="section col" id="nv">
+  <h2 class="h2">NV Data Preview</h2>
+  <p class="just">Examples from the NV-annotated subsets of <span class="sc">Continuo</span>. Multilingual-NVASR transcribes Chinese and English speech together with nonverbal-vocalization (NV) events, such as [Laughter], [Cough], and [Sigh], and this interleaved sequence serves as the training transcript. For long-form and dialogue examples, the NV column lists the speech segments that contain NV events.</p>
+  <div class="pv-head">
+    <div class="seg" role="tablist" aria-label="NV data view" id="nv-tabs">
+      <button role="tab" aria-selected="true" data-view="short">Short</button>
+      <button role="tab" aria-selected="false" data-view="long">Long</button>
+      <button role="tab" aria-selected="false" data-view="dialogue">Dialogue</button>
+    </div>
+  </div>
+  <div class="pv-cols" aria-hidden="true"><span>Example</span><span>Audio &amp; transcript</span><span>NV events</span></div>
+  <div class="pv-list" id="nv-list" aria-live="polite" tabindex="0" aria-label="NV data examples (scrollable)"></div>
+</section>
+
+<!-- ============================================================= RESULTS -->
+<section class="section col" id="results">
+  <h2 class="h2">Results</h2>
+  <p class="just">We train two models with a 0.6B backbone on <span class="sc">Continuo</span>: Continuo-AR (autoregressive with flow matching) and Continuo-NAR (masked generative). Both are competitive with much larger systems on long-form dialogue and learn instruction and NV control, which no open-source baseline supports for long-form speech.</p>
+  <div class="results-head"><div class="seg" role="tablist" aria-label="Benchmark" id="bench-tabs"></div></div>
+  <div class="tscroll"><table class="btab" id="bench-table"></table></div>
+  <p class="results-note">Bold and underlining mark the best and second-best generated-speech scores per column. Parameter counts cover the sequence backbone only.</p>
+</section>
+
+<!-- ============================================================= SAMPLES -->
+<section class="section" id="samples">
+  <div class="col">
+    <h2 class="h2">Audio Samples</h2>
+    <p class="just">Speech generated by Continuo-AR and Continuo-NAR on <span class="sc">Continuo</span>-testset. The long-form cases compare whole-sequence inference, which generates the complete script in one pass, with chunked inference, which generates short chunks of about 25&ndash;30&nbsp;s independently and concatenates them. The instruction and NV cases come from the expressive-control evaluation sets built from <span class="sc">Continuo</span>-testset cases shorter than 5&nbsp;min.</p>
+  </div>
+  <div id="samples-root"></div>
+</section>
+
+<!-- ============================================================== BIBTEX -->
+<section class="section col" id="bibtex">
+  <h2 class="h2">BibTeX</h2>
+  <div class="cite">
+<pre id="bibtex-text">@inproceedings{continuo2027,
+  title     = {Continuo: A Large-Scale Dataset for Controllable Long-Form Speech Generation},
+  author    = {Anonymous},
+  booktitle = {Submitted to the International Conference on Learning Representations},
+  year      = {2027}
+}</pre>
+    <button class="copy" type="button" id="copy-bib">Copy</button>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p>This page is anonymized for double-blind review.</p>
+  </div>
+</footer>
+
+<script>
+(() => {
+const NS = "http://www.w3.org/2000/svg";
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const VOICES = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
+
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) {
+    if (k === "text") n.textContent = attrs[k];
+    else n.setAttribute(k, attrs[k]);
+  }
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function fmt(sec) {
+  sec = Math.max(0, Math.round(sec));
+  return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+}
+function collides(spans, a, b, pad) { return spans.some(([s, e]) => a < e + pad && b > s - pad); }
+function debounce(fn, ms) { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; }
+function arrowKeys(container, attr, fn) {
+  container.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    const tabs = [...container.querySelectorAll("button:not([hidden])")];
+    const i = tabs.findIndex((t) => t.getAttribute("aria-selected") === "true");
+    const n = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+    n.focus(); fn(n.dataset[attr]);
+  });
+}
+
+/* ------------------------------------------------------------------
+   Figure 1: score renderer. Staves = speakers, waveform = turns,
+   directions above the staff, NV tags below.
+   ------------------------------------------------------------------ */
+function renderScore(svg, cfg) {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const W = Math.max(260, svg.clientWidth || svg.parentNode.clientWidth);
+  const narrow = W < 560;
+  const L = narrow ? 30 : 44, R = 6;
+  const plotW = W - L - R;
+  const x = (t) => L + (t / cfg.duration) * plotW;
+
+  const dirBand = 22, staffH = 28, below = 22, gap = 10;
+  const rowH = dirBand + staffH + below + gap;
+  const top = 26;
+  const H = top + cfg.speakers.length * rowH - gap + 2;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("height", H);
+
+  const defs = el("defs", {}, svg);
+  const clipId = svg.id + "-clip";
+  const clip = el("clipPath", { id: clipId }, defs);
+  const clipRect = el("rect", { x: 0, y: 0, width: L, height: H }, clip);
+
+  // Time ruler
+  let major = cfg.major;
+  while ((major / cfg.duration) * plotW < (narrow ? 52 : 46)) major *= 2;
+  for (let t = 0; t <= cfg.duration + 0.001; t += cfg.minor) {
+    const isMajor = Math.abs(t / major - Math.round(t / major)) < 1e-6;
+    el("line", { class: "sc-tick" + (isMajor ? " sc-tick--major" : ""), x1: x(t), x2: x(t), y1: top - (isMajor ? 8 : 4), y2: top }, svg);
+    if (isMajor) {
+      const anchor = t === 0 ? "start" : (t >= cfg.duration - 0.001 ? "end" : "middle");
+      el("text", { class: "sc-time", x: x(t), y: top - 12, "text-anchor": anchor, text: fmt(t) }, svg);
+    }
+  }
+
+  const rows = cfg.speakers.map((sp, i) => {
+    const y0 = top + i * rowH;
+    const sTop = y0 + dirBand, sMid = sTop + staffH / 2, sBot = sTop + staffH;
+    const g = el("g", {}, svg);
+    for (let k = 0; k < 5; k++) el("line", { class: "sc-staff", x1: L, x2: L + plotW, y1: sTop + k * (staffH / 4), y2: sTop + k * (staffH / 4) }, g);
+    el("circle", { cx: 4, cy: sMid, r: 3.5, style: `fill:${VOICES[i]}` }, g);
+    const label = el("text", { class: "sc-label", x: 12, y: sMid + 4, text: sp }, g);
+    const turnsG = el("g", {}, g);
+    const ghostG = el("g", { class: "sc-ghost" }, g);
+    const colorG = el("g", { "clip-path": `url(#${clipId})`, style: `fill:${VOICES[i]}` }, g);
+    return { y0, sTop, sMid, sBot, g, label, turnsG, ghostG, colorG, dirs: [], nvs: [] };
+  });
+
+  const turnEls = cfg.turns.map((tn) => el("rect", {
+    class: "sc-turn", x: x(tn.t0), y: rows[tn.s].sTop - 3, width: Math.max(1, x(tn.t1) - x(tn.t0)),
+    height: staffH + 6, rx: 2, style: `fill:${VOICES[tn.s]};opacity:.09`
+  }, rows[tn.s].turnsG));
+
+  // Waveform bars: a grey copy, and a coloured copy revealed by the playhead
+  const rnd = mulberry32(cfg.seed || 7);
+  const pitch = cfg.pitch || 3, bw = Math.max(1.1, pitch * 0.58);
+  const nSlots = Math.floor(plotW / pitch);
+  const hasBar = new Array(cfg.turns.length).fill(false);
+  let ti = 0;
+  const bar = (tn, px, tMid) => {
+    const edge = Math.min(1, (tMid - tn.t0) / 1.5, (tn.t1 - tMid) / 1.5);
+    const env = 0.55 + 0.25 * Math.sin(tMid * 0.21 + tn.s * 1.7) + 0.2 * Math.sin(tMid * 0.057 + tn.s);
+    const a = Math.max(0.12, Math.min(1, env * (0.45 + 0.55 * rnd()) * Math.max(0.35, edge)));
+    const h = Math.max(2, a * (staffH - 2));
+    const r = rows[tn.s];
+    const attrs = { x: px - bw / 2, y: r.sMid - h / 2, width: bw, height: h, rx: bw / 2 };
+    el("rect", attrs, r.colorG);
+    el("rect", attrs, r.ghostG);
+  };
+  for (let i = 0; i < nSlots; i++) {
+    const px = L + (i + 0.5) * pitch;
+    const tMid = ((px - L) / plotW) * cfg.duration;
+    while (ti < cfg.turns.length - 1 && cfg.turns[ti].t1 < tMid) ti++;
+    const tn = cfg.turns[ti];
+    if (tn && tMid >= tn.t0 && tMid <= tn.t1) { bar(tn, px, tMid); hasBar[ti] = true; }
+  }
+  cfg.turns.forEach((tn, i) => { if (!hasBar[i]) bar(tn, (x(tn.t0) + x(tn.t1)) / 2, (tn.t0 + tn.t1) / 2); });
+
+  // Directions (in time order; skipped when they would collide)
+  const dirs = cfg.directions.slice().sort((a, b) => a.t - b.t);
+  dirs.forEach((d) => {
+    const r = rows[d.s];
+    let px = x(d.t) + 1;
+    const txt = el("text", { class: "sc-dir", x: px, y: r.y0 + dirBand - 6, text: d.text }, r.g);
+    const w = txt.getComputedTextLength();
+    if (px + w > L + plotW) { px = L + plotW - w; txt.setAttribute("x", px); }
+    if (collides(r.dirs, px, px + w, 10)) { txt.remove(); return; }
+    r.dirs.push([px, px + w]);
+  });
+
+  // NV marks
+  cfg.nv.forEach((n) => {
+    const r = rows[n.s], px = x(n.t), lx = px - 3;
+    const txt = el("text", { class: "sc-nv", x: lx, y: r.sBot + 14, text: n.text }, r.g);
+    const w = txt.getComputedTextLength();
+    if (collides(r.nvs, lx, lx + w, 8) || lx + w > L + plotW + 2) { txt.remove(); return; }
+    r.nvs.push([lx, lx + w]);
+    el("path", { d: `M${px},${r.sTop - 4}l3,3.5l-3,3.5l-3,-3.5z`, style: "fill:var(--ink)" }, r.g);
+  });
+
+  const head = el("g", { class: "sc-playhead" }, svg);
+  el("line", { x1: 0, x2: 0, y1: top - 2, y2: H }, head);
+  el("path", { d: "M-5,-9h10v5l-5,5l-5,-5z", transform: `translate(0 ${top - 2})` }, head);
+
+  let lastActive = -1;
+  function setTime(t) {
+    const px = x(t);
+    clipRect.setAttribute("width", px);
+    head.setAttribute("transform", `translate(${px} 0)`);
+    let active = -1;
+    for (let i = 0; i < cfg.turns.length; i++) { const tn = cfg.turns[i]; if (t >= tn.t0 && t <= tn.t1) { active = i; break; } }
+    if (active !== lastActive) {
+      if (lastActive >= 0) turnEls[lastActive].style.opacity = ".09";
+      if (active >= 0) turnEls[active].style.opacity = ".22";
+      rows.forEach((r, i) => r.label.classList.toggle("is-active", active >= 0 && cfg.turns[active].s === i));
+      lastActive = active;
+    }
+    let dir = null;
+    if (active >= 0) {
+      const s = cfg.turns[active].s;
+      for (const d of dirs) if (d.s === s && d.t <= t + 0.5) dir = d;
+    }
+    return { speaker: active >= 0 ? cfg.turns[active].s : -1, direction: dir };
+  }
+  return { setTime, L, plotW, W };
+}
+
+// An illustrative 30-minute, four-speaker dialogue
+function makeDialogue() {
+  const R = mulberry32(20270425);
+  const D = 1800, turns = [];
+  let t = 0, cur = -1;
+  const pick = (w) => { const s = w.reduce((a, b) => a + b, 0); let r = R() * s; for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return i; } return 0; };
+  while (t < D - 2) {
+    let s;
+    if (turns.length === 0) s = 0;
+    else if (turns.length === 1) s = 1;
+    else { const w = [0.40, 0.30, t > 150 ? 0.22 : 0, t > 640 ? 0.2 : 0]; w[cur] = 0; s = pick(w); }
+    const d = turns.length === 0 ? 62 : (R() < 0.2 ? 60 + R() * 140 : 6 + Math.pow(R(), 1.3) * 55);
+    const t1 = Math.min(D, t + d);
+    turns.push({ s, t0: t, t1 });
+    cur = s;
+    t = t1 + (R() < 0.15 ? 3 + R() * 4 : 0.4 + R() * 1.4);
+  }
+  return turns;
+}
+function turnAfter(turns, s, t, frac = 0) {
+  const tn = turns.find((x) => x.s === s && x.t1 >= t && x.t1 - x.t0 > 6) || turns.find((x) => x.s === s);
+  const t0 = Math.max(tn.t0, t);
+  return t0 + frac * (tn.t1 - t0);
+}
+
+const heroTurns = makeDialogue();
+const heroCfg = {
+  duration: 1800, minor: 60, major: 300, pitch: 3, seed: 11,
+  speakers: ["S1", "S2", "S3", "S4"],
+  turns: heroTurns,
+  directions: [
+    { s: 0, t: turnAfter(heroTurns, 0, 0), text: "calm, then bright" },
+    { s: 1, t: turnAfter(heroTurns, 1, 0), text: "curious, animated" },
+    { s: 2, t: turnAfter(heroTurns, 2, 0), text: "low pitch, measured" },
+    { s: 3, t: turnAfter(heroTurns, 3, 600), text: "soft-spoken, slow" },
+    { s: 0, t: turnAfter(heroTurns, 0, 900), text: "faster, excited" },
+    { s: 1, t: turnAfter(heroTurns, 1, 1150), text: "warmer, quieter" },
+    { s: 2, t: turnAfter(heroTurns, 2, 1380), text: "amused" },
+    { s: 3, t: turnAfter(heroTurns, 3, 1500), text: "firm, louder" },
+  ],
+  nv: [
+    { s: 1, t: turnAfter(heroTurns, 1, 70, 0.4), text: "[laughter]" },
+    { s: 0, t: turnAfter(heroTurns, 0, 520, 0.5), text: "[sigh]" },
+    { s: 2, t: turnAfter(heroTurns, 2, 1040, 0.3), text: "[laughter]" },
+    { s: 3, t: turnAfter(heroTurns, 3, 1220, 0.4), text: "[cough]" },
+    { s: 0, t: turnAfter(heroTurns, 0, 1560, 0.5), text: "[laughter]" },
+    { s: 1, t: turnAfter(heroTurns, 1, 380, 0.5), text: "[sigh]" },
+  ],
+};
+
+const heroSvg = document.getElementById("hero-score");
+const nowEl = document.getElementById("score-now");
+const timeEl = document.getElementById("score-time");
+let hero = renderScore(heroSvg, heroCfg);
+let heroT = reduceMotion ? 1800 * 0.62 : 0;
+let scrubbing = false, visible = true, lastFrame = null;
+const LOOP_MS = 52000;
+
+function paintHero(t) {
+  const st = hero.setTime(t);
+  timeEl.textContent = `${fmt(t)} / 30:00`;
+  nowEl.innerHTML = st.speaker >= 0 ? `<b>S${st.speaker + 1}</b>${st.direction ? st.direction.text : ""}` : `<b>—</b>pause`;
+}
+paintHero(heroT);
+
+function tick(ts) {
+  if (lastFrame == null) lastFrame = ts;
+  const dt = ts - lastFrame; lastFrame = ts;
+  if (!scrubbing && visible) { heroT = (heroT + (dt / LOOP_MS) * 1800) % 1800; paintHero(heroT); }
+  requestAnimationFrame(tick);
+}
+if (!reduceMotion) requestAnimationFrame(tick);
+
+heroSvg.addEventListener("pointermove", (e) => {
+  const rect = heroSvg.getBoundingClientRect();
+  const px = ((e.clientX - rect.left) / rect.width) * hero.W;
+  if (px < hero.L) return;
+  scrubbing = true;
+  heroT = Math.min(1800, Math.max(0, ((px - hero.L) / hero.plotW) * 1800));
+  paintHero(heroT);
+});
+heroSvg.addEventListener("pointerleave", () => { scrubbing = false; });
+if ("IntersectionObserver" in window) {
+  new IntersectionObserver((ents) => { visible = ents[0].isIntersecting; }).observe(heroSvg);
+}
+
+/* ------------------------------------------------------------------
+   Figure 3: one 12-minute source recording, three ways to cut it
+   ------------------------------------------------------------------ */
+const VIEW_INFO = {
+  short: {
+    name: "Continuo-Short",
+    rule: "One speaker, 0.5–30 s, taken wherever an utterance passes the quality criteria.",
+    stats: [["Examples", "99.8M"], ["Audio", "146,325 h"], ["Languages", "41"]],
+  },
+  long: {
+    name: "Continuo-Long",
+    rule: "One speaker, ≥ 30 s. Extends across adjacent same-speaker regions and ends at a speaker change.",
+    stats: [["Examples", "4.26M"], ["Audio", "155,688 h"], ["Hours from > 5 min", "50.0%"]],
+  },
+  dialogue: {
+    name: "Continuo-Dialogue",
+    rule: "2–6 speakers, windows ≥ 30 s. Turn order and timing are preserved as recorded.",
+    stats: [["Examples", "1.54M"], ["Audio", "96,452 h"], ["Hours from > 5 min", "66.8%"]],
+  },
+};
+function makeSource() {
+  const R = mulberry32(99);
+  const turns = [];
+  const exchange = (a, b, first) => {
+    let t = a, s = first;
+    while (t < b - 4) { const t1 = Math.min(b, t + 5 + R() * 19); turns.push({ s, t0: t, t1 }); s = 1 - s; t = t1 + 0.6 + R() * 1.2; }
+  };
+  turns.push({ s: 0, t0: 1, t1: 214 });
+  exchange(215.6, 447, 1);
+  turns.push({ s: 1, t0: 449, t1: 609 });
+  exchange(611, 719, 0);
+  const utts = [];
+  turns.forEach((tn) => {
+    let t = tn.t0;
+    while (t < tn.t1 - 0.5) {
+      const len = tn.t1 - tn.t0 <= 25 ? tn.t1 - t : Math.min(tn.t1 - t, 6 + R() * 16);
+      utts.push({ s: tn.s, t0: t, t1: t + len }); t += len + 0.7;
+    }
+  });
+  return { D: 720, utts, longs: turns.filter((tn) => tn.t1 - tn.t0 >= 30), dialogues: [{ t0: 215.6, t1: 447 }, { t0: 611, t1: 719 }] };
+}
+const SRC = makeSource();
+const viewsSvg = document.getElementById("views-svg");
+let viewBars = [], viewState = "short", viewX = null;
+
+function renderViews() {
+  while (viewsSvg.firstChild) viewsSvg.removeChild(viewsSvg.firstChild);
+  const W = Math.max(260, viewsSvg.clientWidth || viewsSvg.parentNode.clientWidth);
+  const H = 124, pad = 2, x = (t) => pad + (t / SRC.D) * (W - pad * 2);
+  const mid = 72, amp = 25;
+  viewsSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  viewsSvg.setAttribute("height", H);
+  el("line", { x1: pad, x2: W - pad, y1: mid, y2: mid, class: "sc-staff" }, viewsSvg);
+  const R = mulberry32(5), pitch = 3, bw = 1.8;
+  viewBars = [];
+  let ui = 0;
+  for (let px = pad + 1.5; px < W - pad; px += pitch) {
+    const t = ((px - pad) / (W - pad * 2)) * SRC.D;
+    while (ui < SRC.utts.length - 1 && SRC.utts[ui].t1 < t) ui++;
+    const u = SRC.utts[ui];
+    if (!(t >= u.t0 && t <= u.t1)) continue;
+    const env = 0.55 + 0.3 * Math.sin(t * 0.19 + u.s * 2) + 0.15 * Math.sin(t * 0.05);
+    const h = Math.max(3, env * (0.4 + 0.6 * R()) * amp * 2 * Math.min(1, (t - u.t0) / 1.2 + 0.3, (u.t1 - t) / 1.2 + 0.3));
+    viewBars.push({ r: el("rect", { class: "vs-bar", x: px - bw / 2, y: mid - h / 2, width: bw, height: h, rx: 0.9, style: `fill:${VOICES[u.s]}` }, viewsSvg), t });
+  }
+  for (let m = 0; m <= 12; m += 2) {
+    el("text", { class: "vs-axis", x: x(m * 60), y: H - 2, "text-anchor": m === 0 ? "start" : m === 12 ? "end" : "middle", text: m + ":00" }, viewsSvg);
+  }
+  viewX = x;
+  el("g", { id: "vs-brackets" }, viewsSvg);
+  applyView(viewState);
+}
+function applyView(v) {
+  viewState = v;
+  const info = VIEW_INFO[v];
+  document.getElementById("vp-name").innerHTML = info.name.replace("Continuo", '<span class="sc">Continuo</span>');
+  document.getElementById("vp-rule").textContent = info.rule;
+  document.getElementById("vp-stats").innerHTML = info.stats.map(([k, val]) => `<div><dt>${k}</dt><dd>${val}</dd></div>`).join("");
+  document.querySelectorAll("#views-tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === v)));
+  const segs = v === "short" ? SRC.utts : v === "long" ? SRC.longs : SRC.dialogues;
+  viewBars.forEach(({ r, t }) => { r.style.opacity = segs.some((s) => t >= s.t0 && t <= s.t1) ? "1" : "0.18"; });
+  const g = viewsSvg.querySelector("#vs-brackets");
+  while (g.firstChild) g.removeChild(g.firstChild);
+  const yb = 28;
+  segs.forEach((s) => {
+    const x0 = viewX(s.t0) + 0.5, x1 = viewX(s.t1) - 0.5;
+    if (v === "short") {
+      el("path", { class: "vs-bracket", d: `M${x0},${yb + 10}V${yb + 4}H${x1}V${yb + 10}`, style: "stroke-width:1" }, g);
+    } else {
+      el("path", { class: "vs-bracket", d: `M${x0},${yb + 10}V${yb}H${x1}V${yb + 10}` }, g);
+      const cx = (x0 + x1) / 2;
+      el("rect", { x: cx - 20, y: yb - 9, width: 40, height: 16, style: "fill:var(--bg)" }, g);
+      el("text", { class: "vs-bracket-label", x: cx, y: yb + 3, "text-anchor": "middle", text: fmt(s.t1 - s.t0) }, g);
+    }
+  });
+  el("text", { class: "vs-bracket-label", x: 0, y: 12, text: v === "short" ? `${segs.length} utterances, each under 30 s` : v === "long" ? "2 monologues ≥ 30 s" : "2 exchange windows ≥ 30 s" }, g);
+}
+const viewTabs = document.getElementById("views-tabs");
+viewTabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) applyView(b.dataset.view); });
+arrowKeys(viewTabs, "view", applyView);
+renderViews();
+
+/* ------------------------------------------------------------------
+   Results (paper Tables 4–6)
+   ------------------------------------------------------------------ */
+const BENCH = {
+  ttsd: {
+    tab: "TTSD-Eval",
+    caption: "<b>Table 1.</b> Dialogue synthesis on TTSD-Eval. ACC: speaker-attribution accuracy; SIM: speaker similarity; CER/WER: character/word error rate.",
+    groups: [["Chinese", [["ACC", 1], ["SIM", 1], ["CER", -1]]], ["English", [["ACC", 1], ["SIM", 1], ["WER", -1]]]],
+    params: true,
+    rows: [
+      ["Higgs Audio v2", "3B", ["60.97", "0.63", "79.32", "70.60", "0.62", "47.54"]],
+      ["VibeVoice-1.5B", "1.5B", ["88.25", "0.73", "9.21", "93.58", "0.68", "10.18"]],
+      ["MOSS-TTSD", "8B", ["95.36", "0.80", "6.08", "95.00", "0.74", "11.09"]],
+      ["Continuo-AR", "0.6B", ["92.89", "0.75", "6.92", "92.66", "0.65", "12.25"], "ours"],
+      ["Continuo-NAR", "0.6B", ["95.30", "0.78", "5.27", "94.89", "0.73", "9.93"], "ours"],
+    ],
+  },
+  testset: {
+    tab: "Continuo-testset",
+    caption: "<b>Table 1.</b> Results on <span class=\"sc\">Continuo</span>-testset (recordings up to 30 min, 1–4 speakers). ACC is macro-averaged over multi-speaker cases.",
+    groups: [["Chinese", [["ACC", 1], ["SIM", 1], ["CER", -1]]], ["English", [["ACC", 1], ["SIM", 1], ["WER", -1]]]],
+    params: true,
+    rows: [
+      ["Ground truth", "–", ["99.33", "0.88", "3.00", "98.38", "0.85", "3.00"], "ref"],
+      ["Higgs Audio v2", "3B", ["75.00", "0.74", "75.46", "72.84", "0.67", "81.38"]],
+      ["VibeVoice-1.5B", "1.5B", ["93.78", "0.81", "4.61", "95.98", "0.75", "5.66"]],
+      ["MOSS-TTSD", "8B", ["99.28", "0.87", "2.18", "99.22", "0.81", "5.83"]],
+      ["Continuo-AR", "0.6B", ["98.57", "0.84", "3.67", "95.05", "0.74", "6.82"], "ours"],
+      ["Continuo-NAR", "0.6B", ["97.38", "0.84", "8.62", "96.46", "0.79", "6.62"], "ours"],
+    ],
+  },
+  instruct: {
+    tab: "InstructTTSEval",
+    caption: "<b>Table 1.</b> Instruction following on InstructTTSEval, scored by Gemini-2.5-Pro. APS: acoustic-parameter specification; DSD: descriptive-style directive; RP: role-play.",
+    groups: [["Chinese", [["APS", 1], ["DSD", 1], ["RP", 1], ["Avg.", 1]]], ["English", [["APS", 1], ["DSD", 1], ["RP", 1], ["Avg.", 1]]]],
+    params: false,
+    rows: [
+      ["VoxInstruct", "", ["47.5", "52.3", "42.6", "47.5", "54.9", "57.0", "39.3", "50.4"]],
+      ["FlexiVoice-Base", "", ["56.7", "59.1", "59.5", "58.4", "63.6", "75.0", "60.6", "66.4"]],
+      ["Qwen3-TTS-12Hz-VD", "", ["85.2", "81.1", "65.1", "77.1", "82.9", "82.4", "68.4", "77.9"]],
+      ["Continuo-AR", "", ["82.0", "72.5", "74.0", "76.2", "83.0", "83.5", "68.5", "78.3"], "ours"],
+      ["Continuo-NAR", "", ["69.2", "59.8", "55.6", "61.6", "67.4", "66.5", "49.8", "61.2"], "ours"],
+    ],
+  },
+};
+const benchTabs = document.getElementById("bench-tabs");
+const benchTable = document.getElementById("bench-table");
+benchTabs.innerHTML = Object.entries(BENCH).map(([k, b], i) =>
+  `<button role="tab" data-bench="${k}" aria-selected="${i === 0}">${b.tab}</button>`).join("");
+function showBench(key) {
+  const b = BENCH[key];
+  benchTabs.querySelectorAll("button").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.bench === key)));
+  const cols = b.groups.flatMap(([, cs]) => cs);
+  const rank = cols.map((c, j) => {
+    const vals = [...new Set(b.rows.filter((r) => r[3] !== "ref").map((r) => parseFloat(r[2][j])))].sort((a, z) => (z - a) * c[1]);
+    return { best: vals[0], second: vals[1] };
+  });
+  let h1 = `<tr><th rowspan="2" style="vertical-align:bottom">Model</th>${b.params ? '<th rowspan="2" style="vertical-align:bottom">Params.</th>' : ""}`;
+  b.groups.forEach(([g, cs]) => { h1 += `<th colspan="${cs.length}" class="grp">${g}</th>`; });
+  let h2 = "<tr>";
+  b.groups.forEach(([, cs]) => cs.forEach(([n, dir]) => { h2 += `<th class="sub">${n}${dir > 0 ? "↑" : "↓"}</th>`; }));
+  let prevKind = null;
+  const body = b.rows.map(([name, p, vals, kind]) => {
+    const cells = vals.map((v, j) => {
+      const num = parseFloat(v), rk = rank[j];
+      const cls = kind === "ref" ? "" : num === rk.best ? "best" : num === rk.second ? "second" : "";
+      return `<td class="${cls}">${v}</td>`;
+    }).join("");
+    const cls = [kind === "ours" ? "ours" : kind === "ref" ? "ref" : "", (kind === "ours" && prevKind !== "ours") || prevKind === "ref" ? "mid" : ""].join(" ").trim();
+    prevKind = kind;
+    return `<tr class="${cls}"><td>${name}</td>${b.params ? `<td>${p}</td>` : ""}${cells}</tr>`;
+  }).join("");
+  benchTable.innerHTML = `<caption>${b.caption}</caption><thead>${h1}</tr>${h2}</tr></thead><tbody>${body}</tbody>`;
+}
+benchTabs.addEventListener("click", (e) => { const t = e.target.closest("button"); if (t) showBench(t.dataset.bench); });
+arrowKeys(benchTabs, "bench", showBench);
+showBench("ttsd");
+
+/* ------------------------------------------------------------------
+   Audio samples. Put audio paths in the "" slots
+   (e.g. "audio/dialogue/zh_01_ar.wav"); empty slots render as pending.
+   `text` is how many leading columns hold text rather than audio.
+   ------------------------------------------------------------------ */
+const SAMPLES = [
+  {
+    title: "Long-Form Generation: Whole vs. Chunked",
+    meta: "Continuo-testset · 1–3 speakers · 7–14 min",
+    superhead: [["", 2], ["Continuo-AR", 2], ["Continuo-NAR", 2]],
+    columns: ["Prompts", "Ground truth", "Whole", "Chunked", "Whole", "Chunked"],
+    text: 1,
+    rows: [
+      ["<span class=\"mono\">[en · 3 speakers · 13:51]</span><br><div class=\"pbox\"><div class=\"sx-label\">Prompt transcript</div><div class=\"px\"><div class=\"turn\"><span class=mono>S1</span> Cool. All right, Eric. I'm looking at this table with some really cool technology. Kind of walk us through what went into this and kind of how that's implemented into your speakers and subwoofers.</div><div class=\"turn\"><span class=mono>S2</span> Not that critical. It's really about the dynamic range to achieve those peaks, so they're not compressed, and that's what most people will realize is like when you listen to an S7T, an S5M, whatever, you're like.</div><div class=\"turn\"><span class=mono>S3</span> But the to to your point, where can people get them? The the way we work, we work with distributors in each country. The distributors are the the specialists, and they they find the dealers, the local audio shops, the local installers, the local places, stores that you can actually listen. In fact, wonderful partner in Taiwan just built a two floor dedicated per listen</div></div></div><div class=\"sx-label\">Script</div><div class=\"sx\"><div class=\"turn\"><span class=mono>S1</span> First, guys.</div><div class=\"turn\"><span class=mono>S2</span> You know, we want to equate that you can get loud and have sound quality, but we're not going to sacrifice one or the other. You can have both.</div><div class=\"turn\"><span class=mono>S1</span> That you're not just interested in making things that look beautiful, not just interested in things that make you know just a lot of output, but really you're looking at engineering, you're looking at the actual acoustic properties of it, and you want to make sure that it's it meets your standards. And having those high standards, I think, is what it has greatly contributed to you being the very first speaker company that has reached that Dominus certification, and that's that's pretty incredible.</div><div class=\"turn\"><span class=mono>S3</span> Because that's the starting sonic signature. So once we fell in love with with the sound, we started with the S7 Tower. Once we once we hit what we wanted, the idea was to make each one as close to that as possible, with the normal limitations of bandwidth, you know, output sensitivity, things like that.</div><div class=\"turn\"><span class=mono>S1</span> Hey, what's going on, guys? This is Youth Man. Today, we have got an incredible video in store for you. We're up here in Verona, Wisconsin. I'm here with my new friends. We've got Eric and Dan. We're gonna share with you the story of Perlison. We're gonna look at some incredible speakers and subwoofers. We're also going to talk a lot about the engineering that went into this series, and even a lot of the certification aspect of it. So we've got a lot to cover. So we're going to just go ahead and jump right into the video. So Dan, thanks so much for inviting me up here to Perlisten headquarters. I'd love for you to just kind of share maybe your role here at Perlisten, as well as some of the story behind the Perlisten brand.</div><div class=\"turn\"><span class=mono>S3</span> Absolutely. Well, thanks for coming from Tampa. I know it's warm and sunny there, and it's minus nine today here in Verona. But it's a great place in the summer, and this is this is home to us. This is corporate headquarters. This is research and development. We do the main acoustical designs here. Eric and I focus on the speakers, the driver development, all the acoustical simulations, the crossover work, and and of course the bulk of the measurements. So that's all done. In this facility, inside and out. In the winter, it's it's 100% inside. In the summer, we do take advantage of northern Wisconsin and you know use the outdoor ground plains and things like that. So, you know that's why we're here. It's also where I grew up, and it's it's it's part of the DNA of of Perlisten. Me, my role, I'm the CEO of Perlisten. Really, my my biggest contribution of the company was was finding all the people to put together. Really talented engineers, really talented manufacturing, marketing, and sales. Once you have a team like that, that's that's when you have a brand, and and that's why I'm so excited about Purlisten, and and that's why we're here here to talk about why we're excited and what we've done and what we're planning to do. Where we're standing right now, right here, is is our first listening room in our new facility. We've only been in this facility for about a year, which is the same age as Perlisten. Okay, December twenty first, twenty twenty. So just over a year ago, and in that time, we've developed some of the products that you're seeing here. And this is the room we use now for the bulk of our Final listening tests. Sure, we have a couple other places we do. I've got a home theater at my house. It's a two channel slash theater. Eric has a a theater at his place, and then we have at our facility in China where we also do some listening. But specifically today, we have. S series, which is the middle, middle of the line, middle of the S line. So this is the S5M, which we call a monitor speaker, which has great versatility. In the case here, where you can use it in the vented alignment, you can use it as a two-channel, full-range kind of intimate stereo system. Sure. Or you can add the subwoofers. We just finished these literally last week. This is our entry-level subwoofer. That really excited about it. It's a push-pull. Involves all the push-pull design criteria that we we have in our flagship. Okay. It's just a lower power, lower SPL, much smaller package. Combining those two subs, we're actually using two of them with S Five M. You end up with a a really neat audiophile grade two dot two, if you will, listening session. Standing next to S Five M, that's our monitor speaker. That's part of our S series line. S series currently is our our top level series. All the S series products share common technology. It's it's what we've kind of started calling Project S within the Perlestin team, and that's really encompasses all the studying, the research, the years of experience that brought us to the point of S series products. The Perlisten team we were made up of mainly engineers, audiophiles. You know we just we just love acoustics, and that's why that's why we're here developing products. So we'd like to apply those crazy ideas into our products. Featured in here is the the DPC array. That's that's the heart of all the S series speakers.</div><div class=\"turn\"><span class=mono>S1</span> What is DCP array for those?</div><div class=\"turn\"><span class=mono>S3</span> DPC, yeah, that's that's good good acronym. It's quick to say, Directivity Pattern Control, and that's that's really a hallmark of what we're trying to do in in the in the product. We're trying to control the dispersion into the room, how it interacts in the room. We're we're focused on a narrower, but not laser beam narrow, just a narrower vertical. So we're eliminating some of the ceiling and some of the floor bounces, which can be distracting and take away from imaging and detail and things like that. But also a wide but controlled, even dispersion in the horizontal. And what that does is it it allows the speaker to interact and use the room. To give that warmth, that much needed warmth, which is part of the experience, it's super important in fidelity. That's also how you create, you know, depth of field, focus on the imaging, things like that. There's, there's just a whole lot of detail in in in what we spent on developing the the DPC array. You know, we went through ideas like single tweeter with radical waveguides or horns, however you want to call it. We looked at and researched for, I don't know how many months, probably six months, using two domes, two identical barium domes, and we really couldn't achieve what we wanted acoustically. So what, what, what came out of that research was kind of the crazier, the radical is the term I used before. Was was adding the two mid ranges along with the. Central tweeter, the beryllium tweeter, and then adding a waveguide, so it's kind of adding the best of, of everything that we've we've been able to do acoustically. So the a waveguide and a tweeter, what does that give you? That gives you advantages of, like I said, controlling horizontal and vertical, and you get some sensitivity increase. So You can use that to increase your power handling and lower your distortion. So right there, you already have a step above a lot of the different products out there that don't have waveguides. Then by adding the two mid ranges with that, so now we're using three drivers together and a waveguide at the lower end of the of the DPC array, which is approximately 1,100 hertz. Now you have those three transducers. So now they have the added sensitivity. Thermal compression goes through the basement. Power handling is increased, and of course now you're sharing that, so so you can do certain things in the crossover to create that vertical dispersion. So where the waveguide stops working, the crossover takes over, and we've started calling it beamforming, where you're controlling where the acoustic beam is in this case, where it's going, so that. That's kind of the the magic, if you will. We like to say, behind the DPC array, but that's also the the the heart of all the S series products. Is that technology? There's certain things in the vocals that come out from that. We're using. Three domes where where most people are using a mid range, even if it's like a small four inch or five and a quarter inch mid range, it's gonna it's gonna weigh somewhere in the order ten to twenty grams. Total moving mass on all three of these together is less than half a gram. There's there's a lot of Interesting things that come out in the detail, the the microsonics or micro detail, I like to call it, just how the vocals are represented. I guess I could go on and on and on about the DPC array, but maybe I shouldn't. But that that is the heart of of the product. As you grow out into the the mid woofers, we're expanding the beam forming, so we're using the woofers' placement physically, the amplitude, and then the phase within the crossover to also to to continue that narrow vertical, wide horizontal. So if you look in our our tech sheets, you can see each one we show the polar pattern. We'll show it in the horizontal and the vertical because they're both important, and you can see how we're looking at it slightly differently. And as you expand within the S series. Now, if we add more drivers, how far down in frequency we do the beam forming and control the dispersion increases. So, in a seven tower, which is a bigger version of this floor standard, it'll have more control. So it has, you know, it's it's the beam forming to the highest level. Anyway, so that's that's the monitor in a nutshell. That's that's the the key acoustical attributes about it. The S series as a whole, we use the same technology to keep the timber matching. So when you build a theater, for example, it's important to have all the speakers have real similar sound quality, sound signatures. I like to say it by using the DPC array, similar drivers, and using similar design criteria. You achieve that.</div><div class=\"turn\"><span class=mono>S1</span> So Dan, you mentioned timber matching. Now, timber matching, or some people say timber or tamber, timber matching. Typically, in a brand, you're going to take the same identical speakers, maybe a left, center, and a right. You're going to use the same materials for the mid-range, same material for the tweeter. But my understanding, you've got a little bit more in depth going on with timber matching with Perlisten.</div><div class=\"turn\"><span class=mono>S3</span> Yep, absolutely, and I'm not sure how it's pronounced either. I think I use it both ways, and I don't know which is correct. But everybody understands the concept that that ideally you're now you're starting with a two-channel system, and you may fall in love with the speaker and how it sounds. And if you're building into a theater, or if you have a multi-purpose room where you're doing two-channel and theater in the same room, when you build into that theater. You know, if you're truly seeking high-end, highest quality sound, yeah, timber matching is a big part of that, and and yes, the driver components is is certainly the starting point. But if you think about it, what what makes the the product sound the way it does? It's not just the drivers, but it's how the crossovers designed and how the directivity pattern is something I'll touch on a lot as we talk about our speakers. But how the room is being propagated into the how the sound is being propagated. Gated into the room. That's so important. So yes, starting with the DPC array and putting that in every product in the theater. That's your starting point, and then using the beam forming. So now we're talking about how we're using the crossover, how we're controlling the integration between all the different drivers, and then how it's how it's forming the horizontal and vertical. So if you look, if again I'll refer to the website. If you look at our our spec sheets, we were showing the polar patterns, vertical and horizontal. There's a A really interesting similarity from product to product. You can look at the polar patterns, and and if you look at the CTA 2034 data, they're going to be very similar because that's the starting sonic signature. So once we fell in love with with the sound, we started with the S7 Tower. Once we once we hit what we wanted, the idea was to make each one as close to that as possible with the normal limitations of bandwidth. You know, output sensitivity, things like that. But but again, now you're gonna put this speaker. Let's say you use this in a larger theater as a surround with an S seven tower, gonna sound very similar. It's and yeah, it'll be a pretty good.</div><div class=\"turn\"><span class=mono>S1</span> I'm thinking, man, that would be incredible. Because these can be like in this set setup here. These are your main speakers.</div><div class=\"turn\"><span class=mono>S3</span> Absolutely.</div><div class=\"turn\"><span class=mono>S1</span> You know, but these can also be some beefy surrounds as well.</div><div class=\"turn\"><span class=mono>S3</span> Right, and so this is kind of the most versatile speaker in the line. So it has a lot of the attributes of the tower. It can be used as we have it now. We have it in vented alignment, so you can see you can't probably see from the camera right now, but we have a down firing vent. Yeah, and that allows it to play in this room. It measures well below thirty hertz. It's twenty five, twenty eight hertz somewhere in there, is the cutoff. So you could easily use that as a satisfying two-channel system, but of course you could add a subwoofer to to get the the extra tactile feeling that you want, or in the theater application where there is a lot of. Subsonics and things like that, the subwoofers can really aid. But then, you know, going to the versatility of the monitor, you can use this as a surround in in like a THX Dominus theater. If you truly were going for the ultimate, that would be just a great system, right?</div><div class=\"turn\"><span class=mono>S1</span> Yeah, for sure. And you could use this like as an LCR, like behind maybe an acoustic transparent screen.</div></div>", [["S1", "assets/samples/longform/en_8892b5d84deb5375_prompt_S1.m4a"], ["S2", "assets/samples/longform/en_8892b5d84deb5375_prompt_S2.m4a"], ["S3", "assets/samples/longform/en_8892b5d84deb5375_prompt_S3.m4a"]], "assets/samples/longform/en_8892b5d84deb5375_gt.m4a", "assets/samples/longform/en_8892b5d84deb5375_ar_whole.m4a", "assets/samples/longform/en_8892b5d84deb5375_ar_chunk.m4a", "assets/samples/longform/en_8892b5d84deb5375_nar_whole.m4a", "assets/samples/longform/en_8892b5d84deb5375_nar_chunk.m4a"],
+      ["<span class=\"mono\">[zh · 1 speaker · 7:34]</span><br><div class=\"pbox\"><div class=\"sx-label\">Prompt transcript</div><div class=\"px\"><div class=\"turn\">那正常，你把手机对着电脑一拍就能够看到。可是泰勒团队搭的屏幕，你看，不管变焦，我们怎么拍，我们都拍不到他。但是，一转头对着体育馆里这个原装的屏幕一照，哎，这立刻就出来了。泰勒立刻就变成任天堂 Switch 的画质。</div></div></div><div class=\"sx-label\">Script</div><div class=\"sx\"><div class=\"turn\">摩尔纹到底是什么？那为了解释这个现象，我们不得不引入本视频唯一一个听起来比较抽象、比较困难的定理。但是不要害怕，我确定你是可以听懂的。这个定理叫做香农奈奎斯特采样定理。那首先采样的原理我们应该都接触过，就是以固定的间隔在原本连续的信息上进行取点。那比如数码相机拍摄视频，或者麦克风录音，都是对现实世界的一个采样的过程。 而香农奈奎斯特采样定理指出，我们在对信息采样的时候，采样的频率必须至少是信号频率的两倍，才能准确的表示原信号。而当采样点的频率低于信号的两倍的时候，我们就会看到，比如这个声波通过这些点在构成的曲线，看起来就和原始信号没有什么关系了，它失真了，它是一个全新的低频信号。那这样的失真，我们有个统一的名字，把它叫做混叠。 那对于相机拍摄来说，道理其实是一样的。我们的被摄物体通过相机的传感器被记录下来的图像，也存在所谓的一个频率。那比如我们现在有一台相机，它的纵向分辨率可能是2K，可能是4K。 那如果我们假设它一行像素记录黑，一行像素记录白，黑白黑白这样排列，那它理论上最多可以记录一千个这样的黑白对，或者两千个。假如是4K的话，但实际测试过程中我们可以看到，由于镜头光学的问题，还有CMOS这个传感器的色彩滤镜，其实是会损失一些分辨率的。所以可能还没有到一千个黑白对，你会发现你已经看不清楚了。它在采样过程中出现了混叠的现象，啊，这种混叠就是我们所谓的莫尔纹。 那放到现实场景中来看，像这种纹理密集的地方，你看它亮度变化快，变动幅度大，这就是高频信息和相机一交错，你看这摩尔纹就出来了。那这种亮度变化缓慢，纹理很舒缓，没有细节的部分，就是低频信息，通常是不用担心的。 那其实吧，说真的，单纯一点点的混叠，一点点摩尔纹，也不至于让画面看起来过于奇怪。那比如我的头发，你看，透过相机，它们也有一些混叠，但是头发是野蛮生长的，信息频率各异，并不整齐，所以画面看起来还算正常。但是我们人类太厉害了，个个都是强迫症，不仅数码相机传感器这个像素方方正正，是规律排列的，连中年男人穿的衬衫也喜欢方方正正，都是格子。 那这时候正在拍摄领导的你就倒了血霉了。如果你亲爱的领导衬衣是高频信息，正好和你那该死的索尼相机传感器空间频率接近，很好，他俩撞在一起就会形成周期性的无法去除的波浪状的混叠。摩尔纹来了。那也不只是领导本人，他办公室的纱窗，为了省钱给你买的垃圾屏幕，都会为你制造这种该死的纹路，让你痛不欲生。 那现在我们知道了摩尔纹发生的原理，我们再来回头看一看开头我们讲到的现象。理论上摩尔纹是难以规避的一个问题，但是泰勒团队到底是怎么规避几万人的手机不和屏幕发生这种混叠的？那虽然关于这次泰勒演唱会还没有明确的幕后信息和数据，但是通过我们的观察，还是发现了他们在屏幕上的一些门道。泰勒的舞台用的是通透度非常高的冰屏，同时屏幕的像素点和像素点之间的距离会比一般的演唱会屏幕宽敞很多。 一般的冰屏点间距可能在八到十毫米，但是泰勒这个屏幕，我们目测估计得在二十毫米以上，是一般演唱会的两三倍。那为什么要这么做呢？前面我们也说了，摩尔纹是否会出现，取决于屏幕被拍摄到的空间频率。 那换句话来说，就是手机和屏幕的距离在某一段区间最容易拍到摩尔纹，近一点或者远一点，很有可能你都拍不到。所以简单来说，就是泰勒团队通过测量，并且选择了更大的点间距，促使摩尔纹形成的拍摄距离变得更远，把大部分的观众都给剔除出了产生手机和屏幕混叠的那个区间。那这个听着可能有一点复杂，听不明白，我们可以通过一个实验来很好的理解他们是怎么做到的。 那这里我们使用一个棋盘的标板，它是由单个像素黑白相间组成的图案。用你的显示器或者电视打开它，确保是百分之一百的放大。然后你可以前后移动你的手机，确保屏幕在焦点上。你会看到在距离显示器一段范围之内，能够很明确的拍摄到摩尔纹。那比如使用iPhone 15 Pro拍摄这么一个四十二寸的电视，这个距离是二十五到六十五厘米。 然后你可以测量这台显示设备的宽度除以它的横向像素数，就可以得到它的点间距。我们这一台是零点二四毫米。我们按照这个算式，等比放大，就可以推算出，当我用这台手机的主摄，距离演唱会大屏二十米以内的位置，都可以比较好的规避莫尔纹的出现。那不过通常来说，点间距越宽，屏幕像素就会越低。但是泰勒演唱会因为很庞大，观众的观察距离够远，所以最终呈现的效果也很好，是一个非常高明的方法。 这时候，我们问题来了。我们现在讲的都是生成的原理，泰勒他们规避的方法。但是如果我去了别的演唱会，也许他们预算没有那么高，用了一些普通大屏，那有没有办法让我不拍到摩尔纹，只拍到我喜欢的歌手呢？答案是也可以，但是需要你从购票选座的时候就开始下一些功夫。 那通常来说，正面拍屏更容易出现摩尔纹，因为这样的混叠面积会非常大，所以你可以选择稍微侧一点的位置。当大屏和你的座位夹角低于六十度的时候，真正处于混叠区域的其实只有这么一小条，摩尔纹就会大大的减少。所以你看，比起正面内场的位置，可能两侧看台拍出来的效果是更好的。所以贵不一定就是好。那另外，我们还可以套用刚才那个算式来算出常规演唱会最容易拍到摩尔纹的区间，你买票的时候可以规避一下。 那这个用来测试的棋盘标板素材，我们也放在官网上了。你可以拿起手机或者相机，在家里面找台屏幕，自己试一试，算一算。但如果说你要去看的演唱会座位已经确定了，就是不好，这预算不够，没办法。或者你又在拍那该死的领导，一动就会被他骂，那怎么办？答案是你还可以调整拍摄的焦距，去避开这个会产生摩尔纹的频率区间。那如果用的是手机，你可以切换成超广角或者长焦，有的时候就可以改善这个问题。 那如果说你的运气依然很糟糕，还在摩尔纹生成的区间里面，那还有一点办法，我可以帮你。那有的相机出厂的时候也会装配这种叫做OLPF的光学低通滤镜。那顾名思义，就是能允许低频信息通过，同时阻挡这些高频信息进入，是个好办法。但是画面看起来会糊一点。但是如果说你的领导抠啊，连这个相机也没有给你配备，你还有最后一招。 怎么说有点损，但是确实有用。比如你放慢快门，用手持或者平移的镜头，让画面运动起来，通过不规则的运动模糊来打破原本的规律排列的信息，摩尔纹也会消失。这确实是一种办法，但是你得想一下，你怎么和领导解释为什么整个会议都是有运镜的？那如果你真的很不幸，在后期才发现你拍到了摩尔纹，那答案就是这种现场拍摄源头就产生的一种破坏性混叠。 后期几乎没有办法，所以它并不能像频闪那样被你用一些插件来后期去除掉，这是困扰行业非常久的一个问题。所以开拍之前，请一定要注意，这是唯一一种后期可能帮不了你的东西。所以希望我们这期视频提到的原理和方法能对你有些帮助。如果你真的遇到摩尔纹无法消除，也不用太焦虑，下辈子转生或者换个领导什么的都可以。 好的，那么以上就是本期节目的全部内容。如果喜欢这个视频的话，也请我们点赞、投币、三连、转发，发给你的朋友们看一看，也许会对他有些帮助，也会对我们有些帮助。那么我们下期见。</div></div>", "assets/samples/longform/zh_0326f9b114dbf250_prompt_S1.m4a", "assets/samples/longform/zh_0326f9b114dbf250_gt.m4a", "assets/samples/longform/zh_0326f9b114dbf250_ar_whole.m4a", "assets/samples/longform/zh_0326f9b114dbf250_ar_chunk.m4a", "assets/samples/longform/zh_0326f9b114dbf250_nar_whole.m4a", "assets/samples/longform/zh_0326f9b114dbf250_nar_chunk.m4a"],
+    ],
+  },
+  {
+    title: "Instruction Control",
+    meta: "Continuo-testset · under 5 min · script and instruction only, no reference audio",
+    columns: ["Source recording", "Continuo-AR", "Continuo-NAR"],
+    text: 1,
+    rows: [
+      ["<span class=\"mono\">[en]</span><br><div class=\"sx-label\">Instruction</div><i>The speaker is a young adult male with a high pitch and a North American accent. He generally speaks at moderate volume and a measured pace, with a happy, energetic tone. The volume is moderate from 0:00 to 0:43, loud from 0:48 to 1:03, and moderate again from 1:03 to 1:28. The pace is measured from 0:00 to 0:37, becomes 34% faster from 0:37 to 0:43, returns to a measured rate from 0:48 to 1:15 after slowing by 26%, and remains measured from 1:15 to 1:28 after increasing by 24%.</i><div class=\"sx-label\">Script</div><div class=\"sx\"><div class=\"turn\">My dad is also an actor, but he started acting after I did, because he was like, \"It's so easy, you can do it. I can.\" I'm like that. Fine. If you think my life's so easy, why don't you go to some open call auditions and you understand how hard it is, how much rejection I face every day at my job? He was like, okay. And he went to all these auditions and he started booking everything. It's a true story. He he got on this show in China, in mainland China, called Little Daddy, Xiao Papa. Half a billion people watch that show. It's like the Big Bang Theory of China, and Richard blew up, and he was like, \"This is a easy. I don't know.\" My plan completely backfired, and my aunt in Shanghai she watched the show, and she would call the house in L.A. and she's like, \"Congratulations, Richard! You're such a good actor. Did your son teach you how to act?\" And he's like, \"No, no, I'm a natural.\" Oh, that's very good. You and your son same business, you know? You two are very funny. He's like, \"No, no, Jimmy is another funny.\" I'm like that. That's Okay, you got one good role. Good for you. I'm happy for you. But you're not a real actor yet. Real actors, we gotta cry. We gotta laugh. Do you even know how to cry in front of camera? He was like, Yes. I just think about how much you suck at ping pong.</div></div>", "assets/samples/instruction/en_f2c45d08e9c0a077_source.m4a", "assets/samples/instruction/en_f2c45d08e9c0a077_ar.m4a", "assets/samples/instruction/en_f2c45d08e9c0a077_nar.m4a"],
+      ["<span class=\"mono\">[zh]</span><br><div class=\"sx-label\">Instruction</div><i>Imagine a young male guide speaking standard Mandarin in a bright, energetic setting. His voice stays at a medium pitch and moderate volume, with a joyful tone and a consistently fast delivery. From 0:00 to 0:22 he speaks quickly; from 0:22 to 1:00 the pace rises by about 23%, adding extra momentum. After 1:00 it eases by about 20%, but remains fast rather than becoming slow or subdued. Keep the performance lively, clear, and upbeat throughout.</i><div class=\"sx-label\">Script</div><div class=\"sx\"><div class=\"turn\">在这个快节奏的时代，我们每个人的时间都变得非常有限。但是这不意味着我们不能够继续创造出有质量内容。这期影片为告诉你八种能够在短时间内快速创作的内容形式。无论你是有经验的创作者，还是说新手创作者，这些方法都能够帮助你在有限的时间内快速创作出有价值内容。 我还会为每一个内容形式提供给你一个真实频道作为例子，帮助你更好的去理解还有应用。Hello，我是Kason，这频道主要是分享关于YouTube频道运营、流量变现以及网络创业内容。我每周分享三部影片，需要记得订阅频道。 我是新手创作者，你可以通过影片下方链接去免费领取 YouTube 新手成功宝典，他会从不同的方面去告诉你如何去正确经营频道。首先，第一种内容形式就是短视频 YouTube Shorts。短视频已经成为现在 YouTube 平台上面最热门的内容形式之一了。为什么短视频适合你在有限的时间里面去创作出来呢？ 因为短视频它通常时长是在十五秒到六十秒，这就意味着你并不需要花费很多的时间去来策划、拍摄，还要编辑。你可以用你碎片化的时间，迅速捕捉一个有趣的瞬间，或者是分享一个简单的技巧，就能够制作出短视频了。这种短小精悍的内容形式是非常适合于你在短时间内快速做出来的，并且能够激发起观众及时反应还有分享的欲望。 那短视频它不仅制作的时间短，同时它有非常强大的传播能力。像零度算法也是非常致力于去推荐给观众更多短视频的，所以你可以通过短视频这种内容形式去获得更多流量，还有订阅人数。现在有很多新的频道，他们透过短视频内容，能够在短时间内大量获得很多的观众注意力。透过短视频内容，你是有机会在短时间内获得大量的观看，还有观众的互动的。 这会对于你频道成长来说有非常大的帮助。最后推荐大家可以去看一个频道叫Zack King，他是以魔术短视频闻名全球的。他通过巧妙的剪辑还有创意，把一个非常普通的生活场景快速变成了一个非常具有视觉体验的效果。Zack King他制作短视频的周期很短，但是又能够去及时激发起观众的兴趣，让他们分享给更多人。 帮助他的频道快速获得了很多的关注数，还有订阅人数。这种内容形式对于提高频道的活跃度，以及吸引到更多新的观众非常有效。</div></div>", "assets/samples/instruction/zh_4e636ef0837e7f1d_source.m4a", "assets/samples/instruction/zh_4e636ef0837e7f1d_ar.m4a", "assets/samples/instruction/zh_4e636ef0837e7f1d_nar.m4a"],
+      ["<span class=\"mono\">[zh]</span><br><div class=\"sx-label\">Instruction</div><span class=\"mono\">S1</span> <i>男性，中年（约40–60岁）；音高偏高；音量大；语速适中；标准普通话。</i><br><span class=\"mono\">S2</span> <i>男性，中年（约40–60岁）；音高适中；音量适中；语速快 (0:08-0:41)、快 (0:42-0:51)，比前一段加快 35%；标准普通话。</i><div class=\"sx-label\">Script</div><div class=\"sx\"><div class=\"turn\"><span class=mono>S1</span> 因为在我看起来，就力学是天下之学，什么东西都跟力有关啊，包括芯片。</div><div class=\"turn\"><span class=mono>S2</span> 芯片是这样的，我们当时还是回到三十八分。 三十八分呢？我们不是做飞机发动机里面的材料，是复合材料。这复合材料就有有一个材料，另外一个材料，两个加在一起，中间有个界面，是吧？界面会脱层，对不对？当时是做这个事情。后来呢，我有同事，那个同事也是移民过来，从欧洲移民过来，他是做的非常好，叫Tony Evans，他是当时做的好，四十来岁已经是顶尖了。 然后他说：“说，哎，我们这个也可以做芯片里面的事情。他认识人，人家找他，他要做做consulting，consulting，嗯。”</div></div>", "assets/samples/instruction/zh_8c6bc6535c54e47c_source.m4a", "assets/samples/instruction/zh_8c6bc6535c54e47c_ar.m4a", "assets/samples/instruction/zh_8c6bc6535c54e47c_nar.m4a"],
+    ],
+  },
+  {
+    title: "Nonverbal Vocalizations",
+    meta: "Continuo-testset · under 5 min · NV tags inserted into the script",
+    columns: ["Prompt", "Continuo-AR", "Continuo-NAR"],
+    text: 1,
+    rows: [
+      ["<span class=\"mono\">[en · Sigh ×1 · Breathing ×1]</span><br><div class=\"pbox\"><div class=\"sx-label\">Prompt transcript</div><div class=\"px\"><div class=\"turn\">That's really artist life for you, mate. Don't.</div></div></div><div class=\"sx-label\">Script</div><div class=\"sx\"><div class=\"turn\">Is it not called the stock? uhm. These pictures are very hard to see. It. Oh my God! Please. All right, wooden gun. A wooden weapon, sorry. Okay, firearm. I should just wrote gun. You know, like no, no. <span class=\"nv\">[Sigh]</span>This isn't what I wanted. This is what I want. So usually, if you've got a wooden stock, that's a good example. It will then be met with rubber at the back because you need some of that soft softness. Uhm having that hard stock makes it incredibly uncomfortable, and the more comfortable it is, the harder it's going to be to just aim comfortably. <span class=\"nv\">[Breathing]</span>Again, this is just my experience. I've not used a lot of firearms. I've only used what four, four. I've used air rifles. Did they count? Not airsoft, but I've used four real firearms. And from my experiences, the more comfortable they were, the way easy they were to aim.</div></div>", "assets/samples/nv/en_0e82bcc16521a270_prompt.m4a", "assets/samples/nv/en_0e82bcc16521a270_ar.m4a", "assets/samples/nv/en_0e82bcc16521a270_nar.m4a"],
+      ["<span class=\"mono\">[zh · Laughter ×1 · Cough ×2 · Breathing ×1]</span><br><div class=\"pbox\"><div class=\"sx-label\">Prompt transcript</div><div class=\"px\"><div class=\"turn\"><span class=mono>S1</span> 哎，有一个区路啊，这个全部都算过了，但是它也只能挖到十二公里。所以说，现在日本它的六公里的深度能不能够达到，还是一个未知的谜。</div><div class=\"turn\"><span class=mono>S2</span> 看到了火星最近拍到一个这样的东西，等我们看。他说：“这个是一个非常诡异的状况，而这个有是火星的火山口。”</div><div class=\"turn\"><span class=mono>S3</span> 所有的战略专家都以为这个特种作战军哦是为了应付斩首行动的，但宝杰他们都错了。特种作战一向是能攻不善守，所以宝杰，你仔细想想看。</div></div></div><div class=\"sx-label\">Script</div><div class=\"sx\"><div class=\"turn\"><span class=mono>S1</span> 叫做极乐世界啊，极乐世界，火星的极乐世界区，在这块地方，这个是等于火星已经绕过一面了，因为海原峡谷在另外一面，整个绕过来以后，在这个上面。好，那这两个东西呢，我仔细给大家看一下这一块啊。</div><div class=\"turn\"><span class=mono>S2</span> 这什么？</div><div class=\"turn\"><span class=mono>S1</span> 这就是那个地形，另外一个地形，看到没有？就。</div><div class=\"turn\"><span class=mono>S2</span> 就这里吗？</div><div class=\"turn\"><span class=mono>S1</span> 这是在哎，对，是在这个地方，对不对？</div><div class=\"turn\"><span class=mono>S2</span> 这个地方。</div><div class=\"turn\"><span class=mono>S1</span> 哎，这是在这个地方两个不同的区域啊，你看就差了很多。这个他说是哎，很可能是风吹的沙石弄的，<span class=\"nv\">[Laughter]</span>是有可能啊。好，然后。</div><div class=\"turn\"><span class=mono>S2</span> 这是火灾那一面。</div><div class=\"turn\"><span class=mono>S1</span> 对，我们来看，就是在这个 Nautics 迷宫啊，就在这块。好，那么现在呢，我先用这个 Mailone 的几个影片啊，给大家看一下哈。好，第一张就是这个更清楚了啊，说这就是让这个这个追星族有一个错误的概念啊，这是火星上的火星上呃的这个迷宫房子啊，Nautics 房子就是很多很多他们的住宿哎，你看这更清楚。导播，你可以照一下，是不是更清楚啊？这个边上。 所以表示说，哦，这是他们的百叶窗通风口啊，这个是他们的围墙一道道，这是不是他们的城市啊？你说底下是有住人的，而且你看这个颜色都不同，你看这个颜色都不一样，所以不晓得什么东西啊啊，所以造成大家猜疑。然后这个就是它的城墙，是啊，哎，这个也是，你看城墙的轮廓，哎，这个是它的火山口，因为那个区我刚刚讲了，海原海原这个峡谷上面都是火山区嘛，奥林匹斯火山带的三个小火山嘛，火山群。 那这个就是照的这个高解析度照片，就是这个美国的所谓的火星的侦察轨道号，它利用这个高解析度的影像科学卫卫星照相机。 特别照的，而且从二零零六年开始，一直到了二零一七年，累积了十几年的照片，拿出来。好，我们现在看一下影片。好，现在可以看，现在它这个影片只有一分四十七秒，<span class=\"nv\">[Cough]</span>就是我刚刚看那火山区里很多密密麻的山脊的东西。这是另外一个景，刚刚看了两个景了，另外一个景。 你看这个分散出来，那科学家是说这个就是它的火山喷出来的岩浆沉积物，日积月累加上它的风吹造成的结果。像这种这张像这张图啊，这个地方就是它的固体的二氧化碳，它的冰水跟冰有的时候有凝结，有的时候融化，融化就滋润这个附近的土地。</div><div class=\"turn\"><span class=mono>S2</span> 在火星上面。</div><div class=\"turn\"><span class=mono>S1</span> 哎，这个就是在火星上，我刚刚说的海原峡谷跟那个火山区中间。</div><div class=\"turn\"><span class=mono>S2</span> 可是中间看起来不像火山口啊。</div><div class=\"turn\"><span class=mono>S1</span> 对它，火山口的附近呢，它这个地方呢，基本上来讲，就是这个地形可能受到火山喷出来的岩浆，这个岩浆日积月累变成沉积岩，累积在那个地方，造成这种不同而且多变化的地地形啊。然后这些。 凹凹起来的地方就是它所谓的迷宫区。你看凸起来，凸起来，但这个唯一的缺点就是说跟刚刚的不一样，它没有一条条的通风口啊，一条条的没有。所以这又是另外一个。哎，你看再仔细看又有了，看到没有？懂吗？你看又有了，仔细看又有了通风口。看刚刚看没有，现在这边都有。好，然后这个就是它有很多这个这个粘土，呃，就是它这个火山沉积岩会变成很多粘土在附着在这个地方。<span class=\"nv\">[Cough]</span>你看这边都是。 哎，你看这个明显，它加上光线的变化，尤其拍网的时候，太阳光照射的结果，照出来这种现象。好，所以从现在刚刚的几个照片来看，几乎在海原峡谷以及靠着这个火山的火火火星的火山区域里面，有各种不同的地形地貌。但这个地形地貌是不是会孕育出来很多火星过去的生命呢？我们要等到科学进一步的证据。</div><div class=\"turn\"><span class=mono>S2</span> 我们看在挪威，每年都有一个篝火节。我们看到这个画面，就是他们堆一个非常大的木板，结果我们看到那个烧的时候的状况非常壮观。</div><div class=\"turn\"><span class=mono>S3</span> 哎，宝杰，这个真的是非常非常漂亮的一个景象，而且我可以告诉你，它本身哦就代表着夏至驱邪的一个概念。所以每逢夏至的时候，对他们来讲，通常都定在六月二十四号，这个叫做仲夏节。<span class=\"nv\">[Breathing]</span>而且最重要的是，到目前为止都用人力来堆叠。你能想象一下吗？用站板哦，从最底层一层一层叠起来，而且要稳。 一路叠到这边，四十公尺高，十层楼，十五层左右。 就人要慢慢爬上去，叠了十层楼高。</div></div>", "assets/samples/nv/zh_4e9a8529bc99d735_prompt.m4a", "assets/samples/nv/zh_4e9a8529bc99d735_ar.m4a", "assets/samples/nv/zh_4e9a8529bc99d735_nar.m4a"],
+    ],
+  },
+];
+
+const PLAY = '<svg viewBox="0 0 12 12" fill="currentColor"><path d="M2.5 1.2v9.6L10.5 6z"/></svg>';
+const PAUSE = '<svg viewBox="0 0 12 12" fill="currentColor"><path d="M2.2 1.2h2.8v9.6H2.2zM7 1.2h2.8v9.6H7z"/></svg>';
+const audios = [];
+function buildPlayer(src) {
+  const wrap = document.createElement("div");
+  wrap.className = "player" + (src ? "" : " is-empty");
+  wrap.innerHTML = `<button type="button" aria-label="${src ? "Play" : "Audio pending"}" ${src ? "" : "disabled"}>${PLAY}</button><div class="ptrack"><span></span></div><span class="ptime">${src ? "0:00" : "—"}</span>`;
+  if (!src) return wrap;
+  const btn = wrap.querySelector("button"), track = wrap.querySelector(".ptrack"), fill = track.firstChild, tm = wrap.querySelector(".ptime");
+  const audio = new Audio(src);
+  audio.preload = "metadata";
+  audios.push(audio);
+  btn.addEventListener("click", () => {
+    if (audio.paused) { audios.forEach((a) => a !== audio && a.pause()); audio.play(); } else audio.pause();
+  });
+  audio.addEventListener("play", () => { btn.innerHTML = PAUSE; btn.setAttribute("aria-label", "Pause"); });
+  audio.addEventListener("pause", () => { btn.innerHTML = PLAY; btn.setAttribute("aria-label", "Play"); });
+  audio.addEventListener("loadedmetadata", () => { tm.textContent = fmt(audio.duration); });
+  audio.addEventListener("timeupdate", () => {
+    fill.style.width = (audio.duration ? (audio.currentTime / audio.duration) * 100 : 0) + "%";
+    tm.textContent = fmt(audio.currentTime);
+  });
+  track.addEventListener("click", (e) => {
+    if (!audio.duration) return;
+    const r = track.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+  });
+  return wrap;
+}
+const samplesRoot = document.getElementById("samples-root");
+if (samplesRoot) SAMPLES.forEach((g) => {
+  const sec = document.createElement("div");
+  sec.className = "sample-group";
+  const superhead = g.superhead ? `<tr class="grp">${g.superhead.map(([c, n]) => `<th colspan="${n}">${c}</th>`).join("")}</tr>` : "";
+  sec.innerHTML = `<div class="sample-head"><h3 class="h3">${g.title}</h3><span>${g.meta}</span></div><div class="tscroll"><table class="atab${g.superhead ? " has-grp" : ""}"><thead>${superhead}<tr>${g.columns.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody></tbody></table></div>`;
+  const tbody = sec.querySelector("tbody");
+  g.rows.forEach((row) => {
+    // The first g.text cells form a full-width text line above the row of players
+    const head = document.createElement("tr");
+    head.className = "trow";
+    head.innerHTML = `<td class="txt" colspan="${g.columns.length}"><div class="txt-in">${row.slice(0, g.text).join("")}</div></td>`;
+    tbody.appendChild(head);
+    const tr = document.createElement("tr");
+    row.slice(g.text).forEach((cell) => {
+      const td = document.createElement("td");
+      if (Array.isArray(cell)) {   // several labelled players, e.g. one prompt per speaker
+        td.className = "aud multi";
+        cell.forEach(([label, src]) => {
+          const item = document.createElement("div");
+          item.className = "multi-item";
+          item.innerHTML = `<span class="mono">${label}</span>`;
+          item.appendChild(buildPlayer(src));
+          td.appendChild(item);
+        });
+      }
+      else { td.className = "aud"; td.appendChild(buildPlayer(cell)); }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  samplesRoot.appendChild(sec);
+  // Full scripts start collapsed; measure only once the table is in the page
+  sec.querySelectorAll(".sx").forEach((el) => clampWithToggle(el, el.parentElement, "Show full script"));
+});
+
+/* ------------------------------------------------------------------
+   Training data preview: real examples from the training set (test-set
+   recordings excluded), audio in assets/preview/.
+     id, lang, dur ("m:ss"), dnsmos, audio, text (NV tags like [Laughter] inline)
+     optional instruction: string, or [[time, text], ...] for timestamped changes
+     dialogue: speakers, turns: [[speaker, text], ...], optional instruction: [[speaker, text], ...]
+     optional form: instruction form ("aps" | "dsd" | "rp" | "free"), shown in the annotation label
+   The Annotation column appears only when a view has instruction annotations.
+   INSTRUCT_PREVIEW feeds the separate Instruction Data Preview section with the
+   same fields; its examples come from the instruction-annotated subsets.
+   NV_PREVIEW feeds the NV Data Preview section: text/turns carry the NVASR
+   transcript with inline tags, nv: {tag: count}, and for long/dialogue
+   nv_segments: [[start, end, speaker, [tags]], ...] (speech segments that
+   contain NV, not event boundaries). Views with no examples get no tab.
+   ------------------------------------------------------------------ */
+const PREVIEW = {
+  short: [
+    {"id": "f0b581d4e2b109af_274_000", "lang": "zh", "dur": "0:13", "dnsmos": 3.58, "audio": "assets/preview/f0b581d4e2b109af_274_000.m4a", "text": "这一波野怪萨满祭司啊，这进攻进攻怪其实是不太不不怎么厉害啊。这不这波萨满祭司对魔法攻击、对建筑的伤害呢也比较低，所以说这波怪一般人都很贪的。我玩的时候我也很贪。"},
+    {"id": "380f0dfdbafeaca4_234_000", "lang": "zh", "dur": "0:10", "dnsmos": 3.58, "audio": "assets/preview/380f0dfdbafeaca4_234_000.m4a", "text": "啊，这个鸟巢的话和三代的功能是一样的。之前我们也说过，我们第一次没有干掉那个大屁股的话，第二次啊，不是说第二次。"},
+    {"id": "d1815f8c11f57853_107_000", "lang": "en", "dur": "0:14", "dnsmos": 3.63, "audio": "assets/preview/d1815f8c11f57853_107_000.m4a", "text": "The Roman climatic optimum meant warmer temperatures in general in the Mediterranean. So what that means is is more evaporation from the Mediterranean, which means more moisture in the air, which in turn means more precipitation and higher agricultural yields."},
+    {"id": "479fa24457cf7b5f_531_000", "lang": "en", "dur": "0:11", "dnsmos": 3.62, "audio": "assets/preview/479fa24457cf7b5f_531_000.m4a", "text": "And while trust is very important when it comes to crew resource management, you also want to verify. The captain did not verify the information that the first officer was giving him."},
+    {"id": "7a1d1ac6bc049239_504_000", "lang": "ja", "dur": "0:05", "dnsmos": 3.67, "audio": "assets/preview/7a1d1ac6bc049239_504_000.m4a", "text": "夜中に一人家を抜け出し、町をさまようこともあったと言います。"},
+    {"id": "3adfd4bf46078fbf_024_000", "lang": "de", "dur": "0:06", "dnsmos": 3.51, "audio": "assets/preview/3adfd4bf46078fbf_024_000.m4a", "text": "und dann glaube ich hatte Caesar dich auch an Tag eins gefragt und jetzt sitzt du tatsächlich hier ein paar Monate später"},
+    {"id": "832330c475d34e28_158_000", "lang": "ko", "dur": "0:05", "dnsmos": 3.58, "audio": "assets/preview/832330c475d34e28_158_000.m4a", "text": "그러니까 우리 박성진 대표님 여기 나와서 하시는 말씀은 거의 한 절반 이상의 책."},
+    {"id": "e45a430b135137fa_012_000", "lang": "es", "dur": "0:05", "dnsmos": 3.5, "audio": "assets/preview/e45a430b135137fa_012_000.m4a", "text": "Un banquero gestiona las transacciones financieras y ofrece asesoramiento sobre inversiones."},
+    {"id": "f594b99a9f8bebd5_029_000", "lang": "fr", "dur": "0:06", "dnsmos": 3.56, "audio": "assets/preview/f594b99a9f8bebd5_029_000.m4a", "text": "Des États-Unis à la France, comment le rap est-il passé d'un genre de niche à une machine à cash?"},
+    {"id": "b1fed09ea3e20531_062_002", "lang": "ar", "dur": "0:05", "dnsmos": 3.53, "audio": "assets/preview/b1fed09ea3e20531_062_002.m4a", "text": "فز فيليان أصيب، وحصل على مليون دولار وااا مليون دولار."},
+  ],
+  long: [
+    {"id": "21bdd2f23d76774f_L0000", "lang": "en", "dur": "1:06", "dnsmos": 3.5, "audio": "assets/preview/21bdd2f23d76774f_L0000.m4a", "text": "This week's episode is brought to you in part by the Gnomis and Science Young Explorer Award. Are you doing excellent research that deserves recognition? The Gnomis and Science Young Explorer Award recognizes bold young researchers who ask fundamental questions at the intersection of the life and social sciences. Researchers who take risks to address relevant and exciting questions with creative approaches, regardless of the research outcome. Submissions are due May fifteenth. Visit science.org/noMiss. That's N-O-M-I-S to apply today. This week's episode is brought to you in part by Science Careers. Looking for some career advice? Wondering how to get ahead or how to strike a better work-life balance? Visit our site to read how others are doing it. Use our individual development plan tool, access topic-specific article collections, or search for an exciting new job. Science Careers, produced by Science and AAAS, is a free website full of resources to help get the most out of your career. Visit sciencecareers.org today to get started."},
+    {"id": "e493d8306d31e428_L0005", "lang": "ja", "dur": "1:36", "dnsmos": 3.44, "audio": "assets/preview/e493d8306d31e428_L0005.m4a", "text": "さあ、いよいよベスト3の発表になります。第三位、コントンのクロマジシ。こちらアルステン、アルステンプラスともに取得難度が高いです。総合すると即率が約24.5%。天童でもなかなか見かけないカードで、尚且つ状態のいいカードというのはね、本当に出わない印象があります。 ベスト3にも入るのも頷ける幻級のカードです。持ってる人が素直にうらやましい。第2、カオスソルジャー海賊の者。アルス戦の取得率が約19.7%と20%台を切っており、完備品入手難度も第4位のカードになります。極品上級のカードの入手はかなり難しいと思いますし、そもそも超人気カードなので、お店に状態のいいカードが置かれていたらすぐに売れてしまうであろう争奪戦必死のカードです。 さあ皆さんいよいよ第一位の発表でございます。もしかしたら皆さん予想ついてるかもしれませんが堂々たる第一位こちらでございます。ブルーです。ホワイトドラゴンおめでとうございます。 完備品入手難度ランキング、備品入手難度ランキングともに1です。やはりデリブルはね、当時デッキに入れてた人も多かったと思いますし、そもそも傷が多い個体なので、現存する中で極上個体を探すのはね、かなりハードルが高いです。アルスティンの出現率が約15.6%というのも納得ですね。遊戯王の中で一番人気と言っていいカードなので、競争相手も多く、値段も非常に高いので、早々入手できるものではないなど感じます。 ぜひ見ている方の中で備品持ってる方いたらぜひ大切にしましょう。"},
+    {"id": "3036dc46ff51d833_L0009", "lang": "ru", "dur": "2:18", "dnsmos": 3.43, "audio": "assets/preview/3036dc46ff51d833_L0009.m4a", "text": "В начале сентября немцы подошли к Киеву. Жуков просил Сталина разрешить вывод войск из города. Только так, по его мнению, можно было спасти армию. Но Сталин считал, что Киев нельзя сдавать ни при каких обстоятельствах. Жуков был смущен, спас ста начальника генерального штаба. В начале сентября немцы начали операцию по окружению советских войск под Киевом. 15 сентября кольцо вокруг города замкнулось. В плен попало 450 тысяч человек. Киевский котел стал крупнейшим в мировой военной истории. Город был оккупирован, а основные немецкие силы продолжили наступление на Москву. На подступах к столице была построена мажайская линия обороны, проходящая через Волоколамск, Мажайск и Малоярославец. За три месяца более 50 тысяч человек выкопали 170 километров противотанковых рвов и оборудовали около 800 огневых точек. Но остановить германскую армию на этом рубеже так и не удалось. 3 октября без боя пал Орел. 6 немцы вошли в Брянск. 13 октября они заняли Калугу и Вязьму. 14 Тв. В окружении попало свыше полумиллиона советских солдат. Стalin находился на грани нервного срыва. Управляющий делами правительства Чайдаев вспоминал. Сталин ходил поспешно по кабинету с растущим раздражением. Это событие просто ошалело его. Я еще не видел товарища Сталина в таком состоянии. Он был потрясён, гневен, крайне возбуждён. Тем временем передовые части вермахта стремительно приближались к Москве. Немецкие бомбардировщики совершали регулярные налёты на советскую столицу. Отдельные бомбы падали прямо на Кремль. Некоторые попали в здание ЦК и Генштаба. От разрывов фугасов в Кремлевском арсенале погибли 92 человека. Бомбы взрывались прямо у Спасской башни и Царь-пушки. Одна из них разорвалась в сквере возле оружейной палаты, выбив стекла в здании правительства. 15 октября, когда до Москвы немцам оставалось чуть более 100 километров, Сталин начал готовиться к эвакуации."},
+  ],
+  dialogue: [
+    {"id": "1ed3448d4764381f_D0000", "lang": "zh", "dur": "11:43", "dnsmos": 3.11, "audio": "assets/preview/1ed3448d4764381f_D0000.m4a", "speakers": 2, "turns": [["S1", "Hello，大家好，我是营养师夏绿地。"], ["S2", "我是营养师小康。"], ["S1", "今天要来聊聊如何远离代谢症候群，守护健康关键。"], ["S2", "你的代谢力好吗？代谢震后曲可能是身体给你的一个警讯。我们先来看看什么是代谢震后曲吧。那相信大家一定都有听过有关于代谢震后群，其实它就是用来评估以及视诊许多慢性疾病。 像是有心血管疾病啊、糖尿病以及中风等等，其实它就是作为一个前兆。因为这些慢性病真正变成疾病之前，它是没有任何的一个症状，其实它很难被人家察觉，或是容易被人家忽略。所以可以透过观察自己我们本身的一个代谢症候群这个状况。 先作为一个预防，越早了解就可以越早行动，那越能提升自己的健康自主力，来创造状态很好的一个自己。"], ["S1", "那小康养师可以跟大家分享一下代谢症候群的诊断标准是什么吗？"], ["S2", "其实它的一个诊断标准啊，就是当一个人有五项检测标准同时出现了三项以上的一个代谢异常，就是有包含高血压、高血糖，还有我们的腰围过粗、三酸甘油脂过高、好的胆固醇过低的时候。 这就是代表身体的一个代谢系统，其实它正在一个失衡。接下来，它就会开始无声无息来去影响到我们身体的一个运作以及它的健康，而罹患慢性疾病的风险就会正在上升当中。那究竟有哪些人会有一些代谢症候群呢？"], ["S1", "那像代谢症候群，哪一些人需要特别注意这五项指标来检视？包含第一个，你觉得你的肚子特别大的人，比如说，嗯，像腰围啊，我们如果女生量超过八十公分，男生量超过九十公分，其实就是一个危险的状态。 应该要去关注一下自己的内脏脂肪的问题。那第二个就是是不是长长久坐呢？像嗯，我自己也是上班族嘛，所以就是一般上班时间坐着的时间比较长。那像这样子的生活形态，也会比较容易会有代谢症候群的风险。 那第三个就是饮食习惯，像如果嗯外食的时候比较多的话，嗯没有好好做选择，就会有一些高油、高糖、高盐的状况。那第四个就是要关心一下你自己跟你的家人是不是有三高的家族病史。 有这样子的状况的话，会比较容易会有代谢症候群。然后第五个就是生活习惯喽，就是抽烟跟饮酒。嗯，抽烟当然它会上升各式各样的心血管疾病的风险。那喝酒的话，就是如果不喝是最好。 那如果要喝的话，就是女生一杯，男生两杯的这个范围之内，会嗯比较减害一点。那最后一个第六个是，有些人可能会觉得，哎，好像没有太大的关系，但其实是跟我们身体运作很有关，就是压力的部分。 当压力过大的时候，我们的压力荷尔蒙会去影响到我们的内分泌系统，所以这些情况也会造成我们的代谢力下降，那就更容易有三高的问题。那接下来要请小康药师跟我们分享一下，说代谢症候群如果我有的话，代表什么？那它的影响会有哪一些呢？"], ["S2", "如果检测已经成为代谢症候群，那表示身体的代谢的调控啊，可能已经开始出现一些异常。不过这时候大家先不要太过的一个恐慌，因为代谢症候群它本身并不是一个疾病，它只是在未来会提高一些健康这个风险。 像是可能会罹患第二型的糖尿病啊的几率就会大幅的一个增加，然后甚至还可能会有罹患心脏病、心肌梗塞以及中风的一个风险的一个增加，再来就是会有脂肪肝以及肾脏的功能一个受损，那最后可能会去影响到一些认知功能。 和提高一个失智的一个风险。然后，其实代谢症候群呢，它也可以叫做一个隐形的一个危机，因为其实在这些慢性病发生之前啊，许多人他在初期通常是没有一些不适的一个症状，直到出现并发症之后才会发现。 所以这就是代谢之后取它真正的一个危险之处，所以它才被称之为一个隐形的一个危机。"], ["S1", "嗯，所以定期检查真的很重要，因为这些状况它不一定会有不舒服的问题，它是身体的一个表征。那再来，我们想要聊聊关于看起来代谢症状群好像是五个独立的指标，但其实这五个之间是有互相的作用关系。 那当我们身体嗯摄取的热量它大于我们消耗的热量的时候，我们会有比较多的内脏脂肪累积在身体里面。那这些内脏脂肪跟皮下脂肪不一样的地方就是，它会引起身体的发炎反应。那这样子的发炎会造成胰岛素阻抗，这应该大家常常有听到。 那这样子阻抗的情形呢？那它会进一步的再造成更多呃内脏器官的脂肪堆积。那这种异常的状况就会形成一个恶性循环，让我们的代谢力下降，然后三高的风险啊，失智的风险会上升。那所以最重要的解方有两个，第一个就是要降低我们的内脏脂肪。 第二个呢，就是要抗发炎。那接下来我们会分享几个生活中可以做的方式，来远离代谢症候群。"], ["S2", "其实预防以及改善代谢症候群，它最重要的就是有关于生活形态的一个改变。首先，第一个，它必须要有健康的一个饮食习惯。第一个，我们可以先选择就是自己容易执行的一些健康饮食法，像是我们先前有跟大家就讨论到有关于地中海饮食、德苏饮食。 或者是以植物为主的一个饮食等等，那再就是要多摄取一些高纤的蔬果，那多选择一些全谷类啊，还有豆类，那当然还要减少一些精制糖、油炸食物以及含糖饮料的一个摄取。那最后一个也是非常重要的，就是有关于健康油脂的一个烹调。 大家可以多尝试一些多种的一个植物油，以及适量的一个坚果的摄取。那除了健康的一个饮食的部分，那当然就是有关于要去增加大家的一个活动量，以及它的规律运动。那我们就是要打破一些连续的一个久坐，每三十五分钟到四十五分钟的时候就要站起来活动一下。 因为其实现在大家的上班族的时间，因为工作压力大，都常常都会在位置上一直坐，一坐就是一个小时以上，所以大家还是要不定时起来稍微运动一下，走下茶水间装个水，然后喝一下白开水，来稍微运动一下。那再来还有有关于每周可以至少一百五十分钟的一个有氧运动。 像是有快走啊、游泳等，都是不错的一些选择。那同时这一周大概要有两次的一个肌力训练，来帮助我们肌肉的维持以及我们的代谢率哦。"], ["S1", "那除了这个之外，我们还要关注自己的体重以及腰围，尤其是腰围的部分，因为它可以代表我们的内脏脂肪。有时候会有一些人，他的 B M I 就是身体的身高跟体重的比例算起来是健康的范围，但是他的腰围就超过了，那就要特别小心。 那第四个是刚刚有提到说抽烟跟喝酒会破坏我们的心血管嘛，所以戒烟跟节制的饮酒是一个很重要的生活形态的调整。那再来第五个就是压力的管理，选一个自己适合的舒压的方式。 像我们在前面的激素胃部保养的部分也有讲到说，关于压力的管理其实是维持健康很重要的一环。那它不止在胃病的部分有帮助，在心血管的预防以及管理的部分，压力管理也非常重要。那第六个就是要做健检喽。 像刚刚提到代谢症候群的这五个标准，有一些是需要做抽血检查才会知道的。那有一些像腰围、体重是你可以在居家测量，所以健检跟你自己生活的观察互相搭配，我们才可以一起远离代谢症候群。"], ["S2", "然后最后一个就是要必须要一个很充足的一个睡眠。"], ["S1", "嗯。"], ["S2", "像大家都知道，其实大家都是建议十点以前就要上床睡觉。大家其实也听到之前那个谁蔡依林都说她几点就要睡觉，九点半的时候就要睡觉。 所以还可以维持他良好的一个生活的形态的作息，还维持他的一些美容啊，或者是他的一些生理的一个机能这样子。所以充足睡眠也是一个非常重要的一个因素哦。"], ["S1", "那最后我们来看一下，就是有五项指标嘛。那如果有五个都是指标都很正常的话，那就恭喜你，代表你现在的代谢功能呢是很正常的，你可以维持现在好的生活形态。然后记得一两年要做一次健检。"], ["S2", "那如果是出现一到两项的一个异常者呢？其实这就是我们要调整的一个黄金时期，可以去透过该讲的饮食的管理，以及运动，还有一些减压的一个部分。那绝大多数可以在一个短期内就可以获得明显的一个改善，避免疾病进一步的一个发展。"], ["S1", "那最后一个就是，如果你有三项以上异常，就这已经属于代谢症候群喽。那你就一定一定要开始改变你的生活方式，因为这是最后一个好的时机，你要避免真的变成糖尿病，真的变成高血压，或是真的有高血脂的一个阶段。 有些人会用“嗯三高预备军”来称呼代谢症候群的这个状况，所以他就是快要变成三高，但还没有，所以这是一个很好的机会，可以去调整自己的生活习惯。那后面我们来看一些常见的问题跟迷思。第一个是代谢症候群一定是胖的人才会得吗？ 瘦子会不会有可能呢？"], ["S2", "那当然，瘦子也是有可能会有，有些人其实他外表看起来不胖，但是其实他的内脏脂肪也是非常的高，加上饮食不均衡、缺乏运动，就有可能会符合代谢症候群的一个标准哦。那接下来我们来看看第二个迷思。 吃药就能控制代谢症候群，不用改生活习惯吗？"], ["S1", "那其实药物它只能控制某些指标，比如说帮助我们调整血压，帮助我们降血糖。但是一开始为什么血压会升高，为什么血糖会升高？它是一种生活习惯病嘛，所以我们要从源头下手，我们的生活习惯必须要调整。 那你的身体状态才会稳定，才能够改变这样子恶性循环的状态。所以说，药物它可以当做一个辅助，但是要搭配我们生活形态的调整，才能让这些慢性病的代谢不好的问题达到改变。那最后一个，第三个迷思就是说，代谢症候群它会遗传吗？ 家族如果有人有糖尿病或心脏病，是不是会比较容易有这样的状况呢？"], ["S2", "有家族病史的，确实它的风险是比较高的，但是其实生活习惯的影响其实是更大的。换句话说，其实遗传就像一个体质，但会不会被诱发，我们真的也不太清楚。但是很多时刻是取决你的日常生活这个选择。 当你生活习惯越不好，饮食习惯越糟，那你但一坏的一个风险的几率，当然就相对会比较高哦。"], ["S1", "好啦，今天的创造状态很好的自己就到这里啦。这集我们分享了很多关于代谢症候群的小知识，让我们一起避免成为三高预备军。"], ["S2", "对啊，可以帮自己设定觉得做得到的健康目标，例如选择低糖、无糖食物，然后常常站起来动一动，给自己好习惯，身体状况就能越来越好哦。"], ["S1", "现在就按下订阅按钮，这样你就不会错过最新的内容啦。"], ["S2", "也欢迎大家把今天的节目分享给你的朋友，尤其是容易久坐的一个伙伴，或许他们会很感谢你哦。"], ["S1", "如果你有任何问题或主题想知道，欢迎留言。我们会在节目中选择一些问题来回答。这集就到这里，我们下次见喽，拜拜。"], ["S2", "拜拜。"]]},
+    {"id": "e170f7be39eebd61_D0000", "lang": "zh", "dur": "4:44", "dnsmos": 3.1, "audio": "assets/preview/e170f7be39eebd61_D0000.m4a", "speakers": 2, "turns": [["S1", "经常有人问我，我们该在什么时候卖出呢？我对他们说：“为什么你首先想到的是卖出呢？”他们说：“当然是为了获取利润，不卖出我怎么赚钱呢？那只不过是账面利润而已。事实上，从房地产赚到的钱是不用课税的，是免税的收入。”"], ["S2", "我就是想不明白，为什么人们看不到这一点呢？在美国，假如你从股票一类的票据资产获得百分之二十的利润，赚到了一万美元，你要把股票出售的话，应课税率是百分之二十。房地产方面，如果我赚到两万美元的利润， 即使这笔钱是需要课税的，我也能无限期的延迟纳税。也就是说，我不用为我的资本利得支付任何的税款。我那些从现金流和房地产所衍生的收入是被动收入，税率是最低的，可说是最好的收入。资本利得是免税的。"], ["S1", "你可以把用来支付资本收益的税款作为投资用途。相对于其他投资来说，你获得的回报也比较多。"], ["S2", "如果你是B或是I象限的人，进行投资的时候，你还可以利用折旧这个东西。根据现行的税法，政府将补偿你在增建或改建工程所损耗的价值，这就是所谓的折旧费。"], ["S1", "跟他们补偿你在电脑和汽车所耗损的价值差不多，但两者之间还是有点不同。在电脑和汽车方面，他们给你补偿是由于你的电脑和汽车的价格下降；在房地产方面，则刚好相反，他们给你补偿是由于你的房地产价值上升。 只要你没有把这个房地产出售，拥有它的时间越长，你得到的利益就越多。"], ["S2", "我想在这里指出，S和B象限的分别。作为B的我，可以利用房地产获得的折旧费来增加我的利益和收入。根据法律，S或E象限的人却不可以那么做。这就是我喜欢投资房地产的原因。 透过房地产的投资，我有更多不用课税的钱流进了我的口袋。即使我的租金收入和开支是一样多，我得不到任何的收入。再加上房产的价值没有上升，折旧可以让我继续赚取金钱。"], ["S1", "说的对，根据你刚才说的情况，即使租金收入和支出相抵，房地产价值又没有上升，你仍然可以赚到钱。事实上，在这个情况下，政府会给你做出补偿的，罗伯特。我想再也没有其他可以让你从政府那里获得补偿的投资工具了吧？"], ["S2", "是的，多夫刚刚为我们解释了他认为房地产是最好的投资的几个原因，也同时说出了我的心声。我对你的意见深有同感。我总是想不明白，为什么电视节目、报章、杂志、财经杂志提到的大多数是票据资产的消息。 很少报道有关房地产的消息。"], ["S1", "我总觉得，一般的财务计划专家为客户设计财务计划时，比较少涉及到房地产方面的投资。"], ["S2", "他们对房地产好像不太熟悉。"], ["S1", "呃，这是其中的一个原因。第二个原因是房地产没有给他们带来什么好处。如果他们建议客户投资在股票或债券的话，在某些情况下，他们可以获得佣金。相反，客户投资在房地产，并不能给他们带来太多的好处。"], ["S2", "我认为，一个称职的财务计划专家必须具备企业、房地产、票据、资产等各项资产的专业知识，明白他们各项的长处和短处。我们没有说房地产是你唯一的投资项目，它也有缺点。可是，政府给房地产投资者提供了多项的税务宽减优惠。 银行又乐意借钱给投资在房地产的人。以上种种说明了投资房地产的好处。我却认为房地产是非常有趣的投资项目。"], ["S1", "是的，我经常向人们说，如果有人向你提供一些有关金钱的建议，你该问一问自己，这个人是不是做过他向你建议的事情呢？他是不是在这个事情上赚过大钱呢？或者他们是不是透过给别人提供建议而赚大钱呢？ 他的答案可以让你知道他们的建议是否可信。"], ["S2", "许多房地产的经纪人不会投资在房地产，股票经纪人也不会投资在股票，因为他们只是推销员，不是真正的投资者。他们是S象限的人，不是I象限的人。"], ["S1", "我在新地区进行房地产投资时，我只会选用那些本身是投资者的房地产经纪人，因为他们才知道我需要的是什么。"]]},
+    {"id": "7046e4acf414ef0c_D0001", "lang": "en", "dur": "2:51", "dnsmos": 3.26, "audio": "assets/preview/7046e4acf414ef0c_D0001.m4a", "speakers": 2, "turns": [["S1", "My next tip for sounding American is to include an er at the end of your words. Er, this is really typical in American English. So before I explain it any further, let's listen to a sentence that includes this a couple times."], ["S2", "In the letter he wrote, remember to water the flowers. In the letter he wrote, remember to water the flowers."], ["S1", "When my British friend was saying \"water bottle,\" this was the second American sound that he was using—the \"er\" at the end of the word. \"Er, water.\" Don't forget to water the flowers. Remember to water the flowers. And this is going to really test your \"r\" pronunciation. We used it in the previous tip, and now we're using it \"er\" again. You really need to make sure you're. Ours are strong and powerful. Remember to water the flowers. All right, let's listen to that clip one more time, and then we're going to pause, and I want you to say it out loud."], ["S2", "In the letter he wrote, remember to water the flowers."], ["S1", "My fourth and final tip is a specific contrast with British English. It is the ending a r y. Again, we're talking about r because r is essential in English, and it's essential in a lot of different languages. I think oftentimes the r is the most challenging sound. In other languages, because it's so integral. Well, in this case, a r y at the end of words is gonna indicate that in American English, we're gonna pronounce the full word: library, secretary, military. Do you hear that ending? Airy, airy, airy. Library. We're gonna say the full word. Let's listen to a quick sentence that uses a couple of these examples."], ["S2", "At the library, the secretary read a book about the military. At the library, the secretary read a book about the military."], ["S1", "In American English, you're going to pronounce each of the final letters a r y. Military. In British English, they often cut out the a. So instead of military, it would be military. Military. That a is just gone. But in American English, each of those letters are pronounced military airy. So let's listen to this clip one more time, and then I want to pause and let you have a chance to repeat the sentence yourself."], ["S2", "At the library, the secretary read a book about the military."]]},
+    {"id": "dfde7849115c135d_D0002", "lang": "en", "dur": "1:00", "dnsmos": 3.23, "audio": "assets/preview/dfde7849115c135d_D0002.m4a", "speakers": 3, "turns": [["S1", "She was the sister who went unnoticed."], ["S2", "A daffodil might look plain next to a lily, but on its own, there is much to be admired."], ["S1", "Now, her greatest chapter is yet to come."], ["S2", "The most important thing is to be yourself."], ["S1", "From the world of Jane Austen's *Pride and Prejudice* comes a new Britbox original drama."], ["S2", "Mary, you will flourish."], ["S1", "Based on the best-selling novel *The Other Bennett Sister*, now streaming only on BritBox. Watch with a free trial at BritBox.com."], ["S3", "What would you lock away to explain your country to the future? In 1876, as America turned 100, a group of citizens sealed their answers inside a safe meant to be opened a century later. But when the century safe was finally unlocked, what the world saw didn't tell an obvious story. It raised a question. What do the objects we choose to remember reveal about who we really are? This is the Century Safe on a history of the United States in a hundred objects. Find it in the ninety-nine percent invisible feed wherever you get your podcasts."]]},
+    {"id": "f3f228b261d814be_D0000", "lang": "fr", "dur": "2:10", "dnsmos": 3.23, "audio": "assets/preview/f3f228b261d814be_D0000.m4a", "speakers": 3, "turns": [["S1", "Ce podcast, en fait, c'est vraiment l'histoire d'une dizaine d'étudiants en médecine et en humanités qui débarquent au sein de l'Organisation mondiale de la santé et qui se posent en fait une question cruciale : est-ce qu'il est encore possible aujourd'hui de soigner le monde ?"], ["S2", "L'OMS était soumis à de profonds bouleversements sur son organisation et donc on s'était dit que c'était vraiment intéressant d'aller pouvoir leur poser des questions directement sur les modifications qui étaient en train de subir l'institution, de comprendre comment eux percevaient ces modifications et comment ils espéraient que l'OMS en ressortirait. L'an dernier, il y a eu, comme on s'en souvient sans doute, des gros débats autour de l'OMS parce que le budget de l'OMS était fortement remis en cause et on s'est dit que c'était vraiment très intéressant d'aller regarder comment est-ce que l'OMS allait réagir, chacun pouvant étudier ces bouleversements. Depuis sa discipline, on constate tous qu'il y a des bouleversements dans le monde aujourd'hui. La santé mondiale, elle aussi, est complètement bouleversée."], ["S1", "Elle est extrêmement fragile. Il a suffi vraiment d'une seule crise pour révéler toutes ses failles. Nous, on est vraiment arrivé dans le contexte des États-Unis qui se retirent de l'OMS, dans un monde où on se veut de plus en plus interconnecté, où on prône en fait cette santé globale, voir en fait à quel point le retrait d'un seul acteur peut en fait tout chambouler. M'a vraiment interrogé sur ce qu'on pouvait faire avec les outils que l'on a."], ["S3", "Je pense que le podcast nous a permis de croiser nos regards. On vient tous de domaines un petit peu différents. On a une sorte de table ronde un petit peu généralisée en une semaine. Donc, je pense que ce qui m'a marqué le plus, c'est justement la question, le rapport en fait entre schématiquement les pays du Nord et les pays du Sud, et comment est-ce que justement dans une institution comme l'OMS, qui est une grande promesse, qui est une promesse finalement de mise en commun, comment est-ce qu'on joue avec ces inégalités de fond, ces inégalités structurelles?"], ["S2", "Donc c'est très important pour l'école d'avoir des médecins qui permettent de réfléchir à ce grave problème général qui est les évolutions de la santé aujourd'hui dans le monde contemporain."], ["S1", "Je pense que ce podcast va vraiment permettre de donner aux auditeurs une plongée très très sincère et honnête et simple de quelques étudiants en médecine qui sont venus dans les coulisses de l'Organisation mondiale de la santé. Peut-être permettre en fait une compréhension claire de ce qui se passe, des enjeux contemporains, ne pas seulement être confronté à de grands discours, à de grandes statistiques, mais vraiment en fait voir et entendre la voix des personnes qui vivent ces changements-là au quotidien."]]},
+    {"id": "b54d349910e9df73_D0006", "lang": "hi", "dur": "1:06", "dnsmos": 3.08, "audio": "assets/preview/b54d349910e9df73_D0006.m4a", "speakers": 2, "turns": [["S1", "युसूफ, तुम जरा बाहर जाओ।"], ["S2", "ठीक है सर। बाबा सब ठीक तो है।"], ["S1", "बेटा तुम््हाारी बीवी करना क चहती ह क्या तुम दोनो मिल कर मुे पागल करना चहते हो"], ["S2", "लेकिन लेकिन बाबा घर में कुछ हुआ है क्या? उसने फिर कुछ किया?"], ["S1", "फिर से मेरी बात सुनो। तुम्हारी बीवी हमेशा कुछ न कुछ गड़बड़ करती है क्योंकि ये उसकी आदत है और वो अपनी आदत के हाथों मजबूर है। वो कुछ गलत करे तो पर्दे डालते उसपे तो वो आज हमारे हॉस्पिटल जाकर जाली रिपोर्ट बनाने का कह रही थी डॉक्टर को।"], ["S2", "कौन सी रिपोर्ट बाबा?"], ["S1", "शायद कोई छुट्टी कैंसिल करवानी थी उसे मैं पूरी बात समझ नहीं सका।"], ["S2", "अरे हाँ जापान की ट्रिप के पैसे वापस लेने होंगे उसको बाबा आप गलत मत समझे खुदा के लिए"], ["S1", "ये पहली बार नहीं बार बार ऐसा होता है।"], ["S2", "मैं समझता हूँ बाबा मगर वो मेरी मदद करना चाहती है।"], ["S1", "बेटा ऐसे मदद नहीं होती। हमने आज तक कौन सा गलत काम किया है? हम ज़िंदगी भर गलत कामों से भागते रहे और वो हमसे गलत काम करवाना चाहती। अपनी बीवी से कहो आइन्दा वो किसी मामले में मदाखलत ना करे। सुना तुमने? सुन लिया ज़ल्ला।"], ["S2", "सुन लिया बाबा।"], ["S1", "आज तो हद ही करते."]]},
+  ],
+};
+const INSTRUCT_PREVIEW = {
+  short: [
+    {"id": "9ebbb1885faedba6_063_000", "lang": "en", "dur": "0:06", "dnsmos": 3.41, "audio": "assets/preview/9ebbb1885faedba6_063_000.m4a", "text": "Because of COVID, we've just been so restricted to what we can and can't do, and I feel like our youth almost is getting taken away from us.", "form": "aps", "instruction": "Female; young adult; Oceania accent; medium-pitched; moderate volume; fast speaking rate; sad emotion"},
+    {"id": "d3e638d6682f90bb_1859_000", "lang": "en", "dur": "0:08", "dnsmos": 3.43, "audio": "assets/preview/d3e638d6682f90bb_1859_000.m4a", "text": "Apple cheesecake. Wow. Or the. No, James. I don't.", "form": "dsd", "instruction": "A medium-pitched male voice, speaking with a North American accent, delivers his words at a slow and deliberate pace. The volume remains moderate throughout, with a clear and steady articulation. The speaker’s tone begins with a sense of surprise, evident in the drawn-out and expressive delivery of the initial phrase. This is followed by a brief pause, then a shift to a more direct and firm tone, marked by a noticeable rise in pitch and emphasis on the word “No.” The emotional undertone transitions from mild astonishment to a more assertive and slightly exasperated response, suggesting a conversational dynamic where the speaker is correcting or gently rebuking another person. The overall character is that of a middle-aged man engaged in a casual, informal exchange, with a touch of playful frustration."},
+    {"id": "66fa10581ee5cbea_2136_000", "lang": "en", "dur": "0:06", "dnsmos": 3.41, "audio": "assets/preview/66fa10581ee5cbea_2136_000.m4a", "text": "No, we we had the the I don't remember was called summer blast or summer burst or was something in Sweden.", "form": "rp", "instruction": "A young man, his voice bright and eager, stands in a sunlit room, recounting a memory with the infectious enthusiasm of someone who’s just remembered something fun. His speech is quick and lively, each word tumbling out in a cascade of high-pitched energy, as if he’s trying to keep up with the excitement bubbling inside him. He stumbles slightly over the name of an event, his tone playful and self-deprecating, as though sharing a private joke with the listener. The room feels warm and open, the kind of space where laughter and conversation flow easily, and his accent hints at a Romance language background, lending a melodic lilt to his words. He’s animated, almost giddy, as he tries to recall the details, his voice rising and falling with the rhythm of his recollection."},
+    {"id": "0a4af5c0fcc14bc0_117_000", "lang": "en", "dur": "0:05", "dnsmos": 3.46, "audio": "assets/preview/0a4af5c0fcc14bc0_117_000.m4a", "text": "What? Whoa! This is like death metal.", "form": "free", "instruction": "The speaker is a male, a young adult, with a medium-pitched voice and a North America accent, speaking slowly and loudly with a surprised, expressive tone. He is likely a young content creator or gamer reacting in real time to something unexpected, such as a sudden, intense sound or visual event, possibly during a livestream or video recording."},
+    {"id": "641fa5897b22a6af_113_002", "lang": "zh", "dur": "0:07", "dnsmos": 3.5, "audio": "assets/preview/641fa5897b22a6af_113_002.m4a", "text": "拉克愣住了，自己这段时间的辛苦付出，竟全被当成了耻辱。失落之际，他又撞见了他的第一位客户帕里。", "form": "aps", "instruction": "Male, a young adult; medium-pitched; loud; fast speaking rate; sad"},
+    {"id": "3247326fa266cd13_572_000", "lang": "zh", "dur": "0:05", "dnsmos": 3.45, "audio": "assets/preview/3247326fa266cd13_572_000.m4a", "text": "八千，把一万以下的都先升到一万以上。哦，这什么？火焰之墙！我这。", "form": "dsd", "instruction": "A high-pitched, youthful male voice speaks rapidly in standard Mandarin, delivering a sequence of statements with energetic and excited intonation. The speaker’s tone is bright and lively, marked by a quick, almost breathless pace and a soft volume that remains consistent throughout. The emotional undertone is one of surprise and curiosity, especially evident in the rising inflection and sudden, sharp exclamation at the end. The voice conveys a sense of playful engagement and spontaneous discovery, as if reacting in real time to an unexpected event or object. The overall impression is of a teenager’s enthusiastic and animated reaction, characterized by a cheerful, inquisitive temperament and a sense of wonder."},
+    {"id": "ac6c9c267c0d81f3_005_000", "lang": "zh", "dur": "0:08", "dnsmos": 3.45, "audio": "assets/preview/ac6c9c267c0d81f3_005_000.m4a", "text": "大儿子、二儿子都已经成家，与儿媳一起怀孕，加上贫困的生活，让高龄怀孕的她十分窘迫。", "form": "rp", "instruction": "A lone figure stands in a narrow alley, the damp walls pressing close, as if the city itself is holding its breath. Speak as the ghost of a story half-remembered, your voice trembling with the weight of unspoken sorrow, each word a fragile thread unraveling in the cold air."},
+    {"id": "fd9575206200a299_1133_000", "lang": "zh", "dur": "0:04", "dnsmos": 3.49, "audio": "assets/preview/fd9575206200a299_1133_000.m4a", "text": "他不过就是个从乡旮旯里出来的小狱警而已，怎么可能帮我办这些事？", "form": "free", "instruction": "说话人的嗓音清亮，音高偏高，音色较为尖锐，音量适中，语速较快，吐字清晰，语气中带有明显的轻蔑和不屑，情绪上表现出强烈的厌恶感。根据声音的特征，可以推测说话人可能是一位年轻女性，处于一个较为正式或严肃的场合，例如办公室、会议室或某种工作环境中，正在对某人或某事表达不满和轻视。"},
+  ],
+  long: [
+    {"id": "ddbb9dc684ae4bce_L0001", "lang": "en", "dur": "1:07", "dnsmos": 3.24, "audio": "assets/preview/ddbb9dc684ae4bce_L0001.m4a", "text": "Blank space is one of my favorite moments in the show every night because the song is essentially about a girl. Who. comes off incredibly charming and is very seductive and and pulls people into her world, and then she proceeds to just go. Absolutely psycho. We wanted to kind of replicate the video. And we wanted it to be a performance showcasing me and all these supposed ex-lovers who I've terrorized and ruined and become absolutely obsessed with. And we wanted to watch that play out on stage. The media kind of got. On board with this idea a couple years ago that I'm this player and I'm a serial dater and I just am constantly dating for sport. So when I wrote blank space, I just thought. All right. If they want to play this character, they want to paint this picture of this girl who's just. Picking up men left and right, and you know this whole imagery of this. Jet-setting, tragic mess that I apparently am. Cool. I'll write a song from that perspective and see how you like it. And it ended up being the biggest song I've ever had.", "form": "aps", "instruction": "Female; young adult; North America accent; medium-pitched; moderate volume; measured (moderate) (0:04-0:17); measured (moderate) (0:17-0:34); 16% slower than before, measured (moderate) (0:34-0:45); 20% faster than before, fast (0:46-0:51); 39% faster than before, slow (0:56-1:01); 56% slower than before, fast (1:01-1:06); neutral"},
+    {"id": "ecf68766ecdf1d19_L0020", "lang": "en", "dur": "1:29", "dnsmos": 3.15, "audio": "assets/preview/ecf68766ecdf1d19_L0020.m4a", "text": "It really is. It's the most severe hoax. The most officious, invasive. Sensitive. To to just get in a, I cannot think of a way a government could subjugate a human being. In in in a more draconian way, and somehow. It is. It's God's judgment. I don't know how to answer how this has been so successful. But I fear. I want to get your thought on this final point. We'll have to wrap it up, and you know, with schooling, I fear we're at a very critical crossroads with the schools where. It's mainly been private schools that have been open, and. To me, the fact that the public schools have been closed is somewhat of a blessing in disguise. If we can make it work, because my concern is this. That parents are so concerned, and and and Republicans have pushed this. And now Democrats, now that Trump is out, they're able to. Echo it as well. You know, open schools at all costs. Schools need to be open. And that they're forgetting to. Particularized their mantra that. Whoa. What does it mean to open schools? Like, I want schools open. But if you open them with a dystopian. Setting of child abuse. That might even be worse than keeping them closed. So. My, what do you think is the leverage point that we could? You know, start. Obviously, you Republicans control the legislature in Michigan. Legislative action. We need. Lawsuits. What could parents do in schools?", "form": "aps", "instruction": "男性，青年（约18–40岁）；音高偏高；音量大；语速适中（0:00-0:17）；语速适中（0:17-1:01），比前一段加快41%；语速适中（1:01-1:19），比前一段放慢23%；语速适中（1:20-1:24），比前一段加快42%；语速适中（1:24-1:29），比前一段放慢27%；情绪愤怒；口音为北美口音。"},
+    {"id": "44c4a55070ca1895_L0018", "lang": "en", "dur": "1:00", "dnsmos": 3.19, "audio": "assets/preview/44c4a55070ca1895_L0018.m4a", "text": "Yeah, I really like that. I can I can visualize that too. Just. That's the path. They're just naturally speeding down. They've been down it so many times, and you're showing them a different way. And the really cool thing is that you know our brains learn to respond to different situations in different ways. So even if this more kinder, gentler, empathetic way of being. Isn't going to allow them to be successful. Let's say in a home environment, you know, because it may not serve them. They may need to be. Tougher, meaner, or whatever, in those kinds of environments. You know the brain has different neural pathways for different situations, and over time, the student can learn. In this room, this is how I need to show up. This is what requires me. To be successful in this room, and in this room, I'm safe. To be more vulnerable, or to take a risk. Um. So I love that idea of. When you're working with the most extreme behaviors, to feel like. You can't fix it. You're only gonna control what you can control. But every single day, you are helping that student create new neural pathways and healthier responses. That's empowering.", "form": "aps", "instruction": "女性，中年（约40–60岁）；音高偏高；音量大；语速适中；情绪开心；口音为北美口音。"},
+    {"id": "5f11155f56976cab_L0001", "lang": "en", "dur": "1:15", "dnsmos": 3.2, "audio": "assets/preview/5f11155f56976cab_L0001.m4a", "text": "A new day, same problems. I tinker with the budget, trying to cut corners and squeeze the pennies out of the taxpayers. There's not much I can do here. But fortunately, zoning is free. With industry being our only demand, I figured that this would be a good chance to make a little bit of money. I get into some specialized industry, zoning out as much as I can in the available space that I have. Once they've all developed up and start making a bit of money, I run out of electricity. Increase the funding, run out of power. Increase the funding, run out of power. Increase! Oh. Well, I'm stumped. At this point, I was a little bit nervous about this challenge, with seemingly no way out of this financial situation, and with Drew just taking up so many dangerous jobs. Come on, mate! I was either going to stay completely bankrupt, or Drew was going to end the challenge faster than I'd hoped. I hit the next milestone, and with it, a little money bonus. I was also able to take out a bit more of a loan, and with an extra cash, I tried something a bit risky. I replaced our wind farm with another coal power plant, and that was enough to get us pretty close to the green. I adjusted our tax ever so slightly, and bam, we were back. It was going to take some time to get into the green, so I needed to do some things that didn't cost any money, like detailing.", "form": "dsd", "instruction": "A high-pitched, youthful male voice with an Oceania accent delivers speech at a measured pace and moderate volume. The tone begins with a sense of surprise, marked by a quickened speaking rate that is 26% faster than the baseline, conveying a burst of energetic curiosity. As the recording progresses, the pace slows to a measured, deliberate cadence, suggesting a shift toward thoughtful reflection. The speaker then resumes a measured pace, now 23% faster than the previous segment, introducing a renewed sense of urgency and heightened emotional engagement. Throughout, the voice maintains a clear, articulate timbre, with subtle inflections that reflect a dynamic emotional arc. The overall character is lively and inquisitive, shaped by the interplay of surprise, contemplation, and renewed energy."},
+    {"id": "5d34ff1733912da7_L0034", "lang": "en", "dur": "0:59", "dnsmos": 3.27, "audio": "assets/preview/5d34ff1733912da7_L0034.m4a", "text": "A few days after Coney 2012 went viral, Jason Russell went home to his wife and two kids to catch his breath. He hadn't slept in days. His mind was racing. He felt like he had lost control. The whole experience was giving him PTSD, bringing him back to his middle school days when the kids were throwing food at him because he was the weird homeschooled musical theater kid. Danica suggested they escape to Palm Springs for a few days so they could recharge his batteries. That trip proved to be far from relaxing. Jason was immediately recognized at the pool and was asked for a photo. Back home in San Diego, Jason says he started hearing voices. They were telling him that he needed to get to New York in 12 hours to stop the war. My mind couldn't stop thinking about the future. He later said in a TV interview. I literally thought I was responsible for the future of humanity. It started to get to the point where my mind finally turned against me, and there was a moment that clicked. I wasn't in control of my mind or my body.", "form": "dsd", "instruction": "声音呈现出低沉、略带沙哑的音色，语速平稳适中，音量保持在中等水平，整体表达中透露出一种内敛的悲伤情绪。音高偏低，使声音显得沉稳而富有重量，语调中缺乏起伏，但能感受到一种压抑的情感张力。整体性格气质表现为成熟、安静、内省，似乎在努力克制情绪，展现出一种深沉而克制的忧郁感。"},
+    {"id": "7ee3670ec3956928_L0003", "lang": "en", "dur": "1:14", "dnsmos": 3.33, "audio": "assets/preview/7ee3670ec3956928_L0003.m4a", "text": "The high state had decided to commence a purge during an election. As I scrambled to get inside, an immediate order was given to my squad to get to the top of the walls for our own personal safety. While the state police would weave through the chaos within the walls to rout out anti-state conspirators for extradition. The air was thick. Tensions were high, and state police were carefully turning on peacekeepers, declaring the desert district of incompetency at the highest level. As the purge went on, leaders were assassinated, entire factions were wiped off the map, and government staff began defecting left and right, hurling themselves over the walls and delving into escape tunnels. However. I stood my ground. And watch the chaos from above. In the aftermath, both desert government and citizens were left shocked, in despair, and in want of change. What was the outcome of the election? Was there even an election? And what of government desert leaders being abducted and threatened? By the end of day two, our district was in shambles.", "form": "rp", "instruction": "A young man stands at the edge of a frozen lake, his breath the only sound in the still air. His voice, steady and low, carries the weight of something left unsaid, each word measured as if testing the ice beneath his feet. The cold seeps into his tone, not with sharpness, but with a quiet resignation, as though he’s speaking to the silence itself. His words hang in the air, suspended like mist above the water, each syllable falling with the same deliberate pace, as if time has slowed to match his heartbeat. Then, without warning, his voice quickens—faster, sharper, as if the ice beneath him has cracked and he must move before it’s too late. The urgency is not loud, but it is unmistakable, a shift from contemplation to something more desperate, as though the stillness has finally given way to the need to be heard."},
+    {"id": "43b38431fe09fb90_L0001", "lang": "en", "dur": "1:32", "dnsmos": 3.15, "audio": "assets/preview/43b38431fe09fb90_L0001.m4a", "text": "This past weekend, I did my annual spring closet reset. And. I just feel so much lighter. After getting rid of all of the items I had that aren't the best. quality. But I noticed that I held on to all of my items from Quince. Quince makes beautiful everyday pieces using premium materials like 100% European linen. Organic cotton. And super soft denim. My latest favorite from Quince is a pair of Bella stretch wide leg jeans. I got them in faded black, and they're my new go-to. They're super comfy with just the right amount of stretch, and they are lightweight enough for these very hot days we've been having in Los Angeles. I love them. I think I'm going to get them in some other colors as well. And. The craziest part is they're only fifty dollars. I cannot remember the last time I got a pair of jeans that I loved for. Fifty dollars. That's unheard of. But Quince works directly with ethical factories and cuts out the middlemen. So you're paying for quality. Not brand markup. Refresh your spring wardrobe with quince. Go to quince.com/ too scary. For free shipping and 365 day returns. Now available in Canada too. Go to quince.com/slash too scary. For free shipping and 365 day return. Quince.com", "form": "free", "instruction": "说话人的嗓音特征表现为：女性，青年（约18–40岁），带有北美口音，音高偏高，音量在整段录音中多次变化，从开始的小音量逐渐过渡到适中，再回到小，最后又提升至适中，整体呈现波动状态；语速则由慢逐渐加快，再放慢，最后又变慢，节奏变化明显。情绪上始终表现出开心的状态，语调轻快，富有感染力。\n\n根据以上声学特征推测，说话人可能是一位年轻女性，身份可能是品牌代言人、内容创作者或产品推荐者，处于一个需要进行产品推广或品牌宣传的场景，例如录制广告、短视频或播客内容，旨在向听众介绍并推荐某品牌的产品。"},
+    {"id": "24e580dc7e78105e_L0008", "lang": "zh", "dur": "0:53", "dnsmos": 3.19, "audio": "assets/preview/24e580dc7e78105e_L0008.m4a", "text": "可这病，朱元璋终究是没治好。中山侯汤和的姑父偷税漏税，朱元璋想严办。 鄂国公常遇春出面求情，永城侯薛显目无王法，乱杀人；怀远侯华云龙强占原丞相托托的府邸；济宁侯顾时、六安侯王治天天喝大酒，开军事会议都敢不参加的。 怀远侯曹兴不守规矩，还收受贿赂；永平侯谢诚、永昌侯蓝玉强占老百姓土地。不只是士兵啊，朱亮祖的小妾的兄弟都敢仗势欺人。 上行下效，功臣们不讲道理，下属们呀也学着作威作福，欺压老百姓，老百姓们苦不堪言。 朱元璋洪武期间爆发的农民起义多达一百八十余次。为了制约功臣，朱元璋命工部铸铁榜文。 说公侯之家以后强占官民资产的，我可以免你们罪两次。 再犯，我可就要杀人了。功臣的关系户一次都不免，敢欺压老百姓，直接处斩。可卵用没有？该怎么样还是怎么样。", "form": "aps", "instruction": "男性，青年（约18–40岁）；音高适中；音量适中（0:00–0:33）、大（0:33–0:52）；语速快（0:00–0:45）、快（0:45–0:52，比前一段加快20%）；情绪平静（0:33–0:41）、愤怒（0:41–0:52）；标准普通话。"},
+    {"id": "8739092381ea24e3_L0002", "lang": "zh", "dur": "2:08", "dnsmos": 3.32, "audio": "assets/preview/8739092381ea24e3_L0002.m4a", "text": "没想到的啊，我以为新郎的意思呀，是谁能要到美女姐姐的电话啊？没想到厕所办证的小广告也算。但我刚从厕所出来，墙上那个大表走得飞快，竟然直接窜到了十二点。我操！说时迟那时快啊，我身边的美女直接变成恶鬼，拿下了我的人头（括号物理）。好家伙，兄弟们，是不是感受到了一点黑色幽默了啊？然后游戏画面啊，突然回到了我自己的家里，同行的哥们血呼啦的倒挂在我边上。家里的鹦鹉说：嘿嘿，你必须逃出安康鱼，回到家里来。 怎么说，朋友们，看到这里是不是感觉有那么一点意思？但很显然啊，目前为止的发展都只是这款游戏的冰山一角。然后我又来到了安康鱼酒吧的门口，那个红衣女子缓缓走入，门口多了一把大剪子。酒吧里面的兄弟还在嗨啊，好家伙，原来我重生轮回了啊！而这一次最右边的房间被树丛包裹住了，我直接剪开，里面破败不堪，但柜台上面放着一把猎枪，猎枪上还有介绍呢啊，单击空格以终结生命。我出门之后，酒吧里面又充斥着各种怪物，我一顿乱杀，两枪一个啊，全部杀光。而地下室的门这个时候也开了。 我下去一看，哟，别有洞天啊！这个酒吧的地下室啊，像个地牢一样。没走几步，地板上面开始有地刺出来戳我。我沉着冷静，华丽走位，来到了终点，穿过的大门，走到了一个厨房。一个恶鬼啊，拿着菜刀剁着一位白发女子。没记错的话呢，刚才家里上挂的合照也是这位姑娘啊。我走过去的时候啊，就像好莱坞电影里的笨蛋一样，不小心踩到了地上的碎骨头，发出了声音。恶鬼一个大跳跳过来，再次取下了我的向上兔头。然后我们又回到了酒吧门口。 聪明的观众这个时候肯定反应过来了啊，跟上期玩过的那个叫做 House 游戏有点像了。主角呢也是拥有无限复活的能力，用一次次的重生啊来拨开迷雾，寻找真相。有着急的观众这个时候肯定准备退出窗口骂人了啊，太俗了吧？不，我只能告诉你们啊，完全不一样。每次进门的时候啊，这个狗子都会问我一些问题，我们可以回答 yes 或者是 no。再进酒吧呀，我发现十二点之后虽然各位都变成怪物了，但点唱机还是能点歌的。 但音乐啊都是恐怖游戏的啊，生化危机、寂静岭一应俱全。贴心的不对，再次来到厨房击败怪物之后，继续走，走到了一个纯黑的洞穴，这里只有几只蝴蝶发出微弱的小光啊。我寻思啊，这纯盲走也太难了，我急得原地开枪啊，发现竟然是让我们用开枪时的火光来寻路，这个设定还是有点意思的啊。开灯之后，我发现地上有一个跟我同款面罩的尸骨，不知道暗示了什么。往下走，又见到了那个酒吧门口遇见的红发妹纸，我赶紧追过去啊，发现一个老哥被种在了植物里面抽血，他嘴里念叨着。", "form": "dsd", "instruction": "A high-pitched, energetic voice at a loud volume, delivered at a fast speaking rate, with a surprised and expressive emotional undertone that conveys a youthful, excitable, and animated character."},
+    {"id": "3089a6ccb88140ab_L0009", "lang": "zh", "dur": "2:30", "dnsmos": 3.28, "audio": "assets/preview/3089a6ccb88140ab_L0009.m4a", "text": "接下来呢是六部车的底盘滤震性能测试。如果说这项测试对于往期的绝大多数车型来说是选做题的话，那对于他们而言则是必考题。 因为他们的定位和售价会让你的亲朋好友在乘坐他们的时候抱有一个近乎于挑剔的预期。那如果预期和实际乘坐感受差距过大的话， 那某某买车啊，死要面子活受罪的风评就会谣言四起。 那这场关乎于尊严的测试，谁能更给你面子呢？我们马上颠起来。 盲猜林肯航海家和奔驰GLC L会有突出表现。 毕竟，一个听名就很浪，另一个是老豪门了。 可通过三轴传感器对振动加速度的记录和助理小姐姐的主观体感，我盲猜对了一半。 航海家软糯的悬架，加之轩腾的大沙发座椅。 确实能给人以陆地行船的感觉。 同为美系的凯迪拉克XT5，同样也是这种调教思路。 不过，跟祖师爷一比，稍显黯然失色。 在舒适性的追求上，没有航海家那般极致。 掺杂了些许欧洲车独有的硬朗和紧致，GLC L的表现则令人略感失望。偏软的悬架压过颠簸虽不生硬，但过滤的却没有那么干净，细碎震动体感可察。 而且，当被抛跳的车身落地时，还会出现车尾轻微横摆的问题。难不成真应了坊间那句话：“一级以下无奔驰？” 同样有着落地车尾横摆问题的，还有沃尔沃XC60。 不过，北欧冷峻小生的悬架表现，如斯堪的纳维亚的雪一般干净。 体感韧而不散，没有恼人的碎震。 欧系车中，滤震表现最好的是使用了前后五连杆悬架的奥迪Q五L。 一言以蔽之，就是厚重和规整。 无论是日常行驶中座舱与路面的隔绝感，还是路遇颠簸时悬架对冲击干脆利落的化解。 都能让您实打实感受到“行驶高级感”一词的含义。 全场车内震感最强烈的当属宝马X3，虽然科拉二架构的主旋律是舒适，但再软那也是宝马的软。 当压过较大坑洼时，悬架还是会被唤醒骨血中的BMW基因，用最快速度完成压缩与回弹，一路操作猛如虎，体感冲击似乱舞。", "form": "rp", "instruction": "把声音想象成一束被压抑的电流，在胸腔里反复冲撞，每一次吐字都像在敲打生锈的铁门。音高偏高，像绷紧的琴弦，随时可能断裂；语速适中，却带着一种焦灼的节奏，仿佛时间在催促他快一点、再快一点。音量适中，但每一次起伏都像在试探底线，像是在忍耐，又像是在积蓄力量。音色略带沙哑，像是被烟雾熏过，又像是被情绪反复揉搓。他站在一个空旷的房间里，四周回响着自己的声音，仿佛整个世界只剩下他一个人。他的愤怒不是爆发，而是像火山喷发前的闷雷，低沉而有力，每一句话都像是一块石头，重重地砸在地面上，激起尘土飞扬。他的情绪在波动，音量时大时小，像是在控制自己的情绪，又像是在与某种无形的力量对抗。他的愤怒不是针对某个人，而是针对整个世界，针对那些无法言说的委屈和不甘。他的声音像是在呐喊，又像是在自言自语，像是在寻找出口，又像是在自我折磨。他的愤怒像是一团火，燃烧着他的理智，也燃烧着他的希望。他的声音像是在诉说，又像是在控诉，像是在寻找答案，又像是在寻找解脱。他的愤怒像是一场风暴，席卷着他的内心，也席卷着他的世界。他的声音像是在挣扎，又像是在抗争，像是在寻找光明，又像是在寻找黑暗。他的愤怒像是一场梦，梦醒时分，他发现自己依然站在原地，面对着那个无法改变的世界。"},
+    {"id": "06233f6169e1e6d8_L0000", "lang": "zh", "dur": "0:57", "dnsmos": 3.36, "audio": "assets/preview/06233f6169e1e6d8_L0000.m4a", "text": "最近去了一趟牙科，让我直犯嘀咕：明明每天刷牙，怎么口腔问题还是找上门呢？ 其实问题可能出现在那些你忽略的清洁盲区。今天我要揭秘一款我的口腔护理神器——拜尔专业冲牙器。刷牙后，口腔里还有百分之三十的清洁不到位的地方，牙龈沟、龋齿缝隙这些地方都是细菌滋生的温床。但是自从我用了拜尔这款专业冲牙器，这些问题都迎刃而解了。它拥有三百毫升超大水箱，一次蓄水就能满足单次清洁需求。 第二代金属血泵，双流管道设计，间接脉冲振频技术，让血流深入每个角落。 而且它还包括专业敏感喷嘴、极细可旋转设计，真是贴心到家。现在我的口腔健康得到了极大改善，拜尔专业冲牙器真的是我的口腔健康小助手。你也来试试吧，相信我，你也会爱上它的。", "form": "free", "instruction": "说话人的嗓音特征表现为：性别为女性，年龄处于青年阶段（约18–40岁），口音为标准普通话，音高偏高，音量大，语速适中，情绪开心。声音清晰明亮，富有活力，语调积极，具有较强的感染力和亲和力。\n\n根据上述嗓音特征及表达方式，可以合理推测说话人可能是一位从事健康或美容类产品推广的主播、主持人或品牌代言人，正处于一个需要向观众或听众介绍产品、分享使用体验的场景中，例如录制产品广告、进行直播带货或参与健康科普节目。"},
+  ],
+  dialogue: [
+    {"id": "031fec7da6bf3a2b_D0015", "lang": "en", "dur": "2:20", "dnsmos": 2.87, "audio": "assets/preview/031fec7da6bf3a2b_D0015.m4a", "speakers": 4, "turns": [["S1", "And speaking of late '90s anime series, I don't know about all of you, but I kind of grew up with Inuyasha in the background of my life, and so I was kind of surprised to find out there was apparently a 2007 Nintendo DS RPG, Inuyasha: Secret of the Divine Jewel. After playing it, I kind of find out why nobody really talked that much about it."], ["S2", "Yeah, there was a lot of interesting lore about Inuyasha shared on the podcast because, like, the anime was done in what 2003, and it was just the manga that was still going until 2008, if I remember correctly. So this followed, I think, more of that story, but also was like self-insert, and it was kind of weird. It wasn't necessarily like good either, but it it certainly existed, and it was like way after the show. And I think they were probably just trying to keep interest in it, honestly."], ["S1", "Yeah, to some degree. Though I will say, like, given that Inuyasha was like, these days we have the what the anime genre at the moment is like isekai stuff like this. Though it's generally like, oh yeah, dude gets pulled from like modern Japan into whatever fantasy world. Has like all the girls flocking to him and all the superpowers and stuff. Inuyasha was doing that for women like 20 years ago, absolutely ahead of the curve. And so, having a story where you have like this completely new self-insert character coming to the story. I said it in my commentary, but I am surprised they didn't just let you name her because I feel like that would have been the perfect hook for people at the time. Of like, yeah, go on your own magical Inuyasha adventure and be the super special cool girl."], ["S3", "No, Janice gets to be the special cool girl."], ["S1", "Yeah, nobody cares about Janice."], ["S3", "Yeah, I totally did not feel bad for Janice. It was like first world problems. Like she starts the the whole game with like, \"Oh, I live in a mansion, and now I have to go live in Japan. Poor me.\" And I'm just like, Janice, get out of here. No one cares about your problems, Janice."], ["S2", "I think Janice does."], ["S3", "No, she's fine. She's okay. She has like billions of dollars now. I'm sure."], ["S2", "She'll be fine. The kids will be okay."], ["S3", "Yeah, she's fine."], ["S4", "Time to get moving."]], "form": "dsd", "instruction": [["S1", "A high-pitched male voice, speaking at a measured pace and moderate volume, carries a tone that is bright and slightly strained, suggesting a middle-aged North American man with a lively and engaged temperament."], ["S2", "A medium-pitched male voice, delivered at a measured pace and moderate volume, maintains a neutral and steady emotional undertone, reflecting a young adult North American man with a composed and reserved character."], ["S3", "A high-pitched female voice, spoken at a measured pace and moderate volume, radiates a cheerful and upbeat emotional undertone, indicating a young adult North American woman with a warm and expressive temperament."], ["S4", "A high-pitched child’s voice, delivered at a measured pace and moderate volume, exudes a joyful and playful emotional undertone, suggesting a child with a Romance accent who sounds lively and animated."]]},
+    {"id": "39713536163ab40b_D0005", "lang": "en", "dur": "2:04", "dnsmos": 2.93, "audio": "assets/preview/39713536163ab40b_D0005.m4a", "speakers": 4, "turns": [["S1", "Should we just get started?"], ["S2", "So, kind of a rapid debrief. These are our final rankings for CASP."], ["S1", "We beat the second team in this competition by nearly 50 percent, but we still got a long way to go before we solve the protein folding problem. In a sense, that a biologist could use it."], ["S2", "It is area of concern."], ["S3", "The quality of predictions varied, and they were no more useful than the previous methods."], ["S4", "AlphaFold didn't produce good enough data for it to be useful in a practical way. To say somebody like me investigating my own biological problems."], ["S2", "That was kind of a humbling moment because we thought we'd worked very hard and succeeded, and what we had found is we were the best in the world at a problem the world's not good at. We knew we sucked. It doesn't help if you have the tallest ladder when you're going to the moon."], ["S1", "The opinion of quite a few people on the team that this is sort of a fool's errand in some ways, and I might have been wrong with protein folding. Maybe it's too hard still for where we're at generally with AI."], ["S3", "If you want to do biological research, you have to be prepared to fail because biology is very complicated."], ["S4", "I've run a laboratory for nearly 50 years, and half my time I'm just an amateur psychiatrist to keep my colleagues cheerful when nothing works, and quite a lot of the time, and I mean 80, 90 percent, it does not work. If you are at the forefront of science, I can tell you, you will fail a great deal."], ["S1", "I just felt disappointed. The lesson I learnt is that ambition is a good thing, but you need to get the timing right. There's no point being fifty years ahead of your time. You will never survive fifty years of that kind of endeavour before it yields something. You'll literally die trying."]], "form": "rp", "instruction": [["S1", "A stonecutter’s voice, steady and low, each word shaped with the patience of a craftsman carving meaning from silence."], ["S2", "A megaphone echoing through a crowded hall, every syllable stretched wide and bright, demanding attention from the rafters."], ["S3", "A wind chime in a misty valley, her tone clear and high, shimmering with the faintest trace of memory and distance."], ["S4", "A river guide’s calm baritone, measured and smooth, guiding unseen currents with quiet authority and gentle insistence."]]},
+    {"id": "5789e7e72d51d5c7_D0002", "lang": "en", "dur": "3:09", "dnsmos": 2.97, "audio": "assets/preview/5789e7e72d51d5c7_D0002.m4a", "speakers": 4, "turns": [["S1", "When a sunspot unleashes its magnetic energy, what results are the most colossal explosions in the solar system? Solar flares. A single flare releases as much as a billion megatons of energy, the combined power of a million volcanic eruptions on Earth."], ["S2", "They appear as these very bright regions, and they're so bright because the temperature is so high, on the order of 10 million degrees, and they can last for hours. But the energy is massive."], ["S3", "The whole explosion is equivalent to millions of nuclear bombs leaving the surface of the sun all at once."], ["S1", "Solar flares don't just explode out into space; they also funnel high-energy particles down to a layer of the sun called the chromosphere, where they quickly transfer their energy, like a cue ball striking the rack in a game of billiards."], ["S2", "So the cue ball acts like one of these very high-energy particles coming from the flare region. The cue ball smacks very quickly into the eight ball rack, and once it impacts that head ball, it's going to transfer that energy to the balls behind it, and then they will all fly out because the energy is transferred to all of them."], ["S1", "If a large flare shoots enough high-energy particles at once, strange things start to happen. This is actual footage of a sunquake."], ["S4", "In 1998, there was a solar flare up in the corona that was so powerful that the material flying down toward the surface of the sun actually slapped the surface and caused ripples to spread out from there."], ["S1", "While they may look like ripples on a pond, these are actually waves two miles high, traveling at a maximum velocity of 250,000 miles per hour. The 1998 Sunquake would have measured an 11.3 on the Richter scale, more than one million times stronger than the 1989 earthquake that shook San Francisco. In order to shake the surface of the sun that much, the solar flare had to release a colossal amount of energy."], ["S4", "It turns out it's almost the same amount of energy as if you covered the entire landmass of the Earth with dynamite, about a yard thick, and set it all off at once. So these explosions are not small."], ["S1", "Earthquakes aren't the only natural disasters with equivalents on the sun. A flare can also kick off a solar tsunami, as waves of plasma in the sun's atmosphere rocket out at 700,000 miles per hour, spreading around the entire face of the star in a matter of hours."]], "form": "free", "instruction": [["S1", "An elderly male with a low-pitched, measured voice and a North American accent speaks in a neutral, calm tone at moderate volume. His delivery is steady and authoritative, suggesting a formal educational setting such as a documentary narrator or science educator presenting information to a general audience."], ["S2", "A young adult female with a high-pitched, measured voice and a North American accent speaks in a cheerful, upbeat manner at moderate volume. Her tone is lively and engaging, indicating a friendly, informal context such as a teacher or presenter explaining a concept to students or a public audience."], ["S3", "A middle-aged male with a medium-pitched, measured voice and a North American accent speaks in a neutral, matter-of-fact tone at moderate volume. His delivery is clear and composed, suggesting a professional or academic role such as a scientist or lecturer providing factual commentary in an educational or documentary setting."], ["S4", "A young adult male with a medium-pitched, slow voice and a North American accent speaks in a calm, deliberate manner at moderate volume. His tone is steady and thoughtful, indicating a reflective or explanatory role such as a researcher or educator contributing a detailed observation in a formal or instructional context."]]},
+    {"id": "34b425ab0a01e171_D0000", "lang": "zh", "dur": "1:16", "dnsmos": 3.26, "audio": "assets/preview/34b425ab0a01e171_D0000.m4a", "speakers": 3, "turns": [["S1", "是吗？安儿一路舟车劳累，可曾休息好？可有着凉受冻？可是饿了？方才我嘱咐陈妈给你煲了鱼汤，再换身衣裳，洗洗风尘。"], ["S2", "厢房还没打理好呢。再说了，我是来叫你休息的。从前便成日忙个不停，这会儿又操起我的心来了。"], ["S1", "姐姐正赶着吉日给你绣个荷包，远道归来应当添个吉祥的物件，给安儿讨个如意才是。"], ["S2", "别这么操劳了，我特地从西洋带了新鲜的玩意儿送你呢，还有小荣的份儿。哎，对了，小荣呢？怎么回来不曾见他？"], ["S1", "蓉儿她前些日子生了病了，眼下正在医院休养。"], ["S2", "圣音医院吗？说起来，好久没去过东市了，刚想去转一转。"], ["S1", "早些回来，莫再贪耍，忘了时辰，让爹娘担心。"], ["S3", "咱们现在要去医院，然后这里的话，咱们还是看一下啊。西厢房现在是长姐和姐夫同住，姐夫过去便体虚身弱，不知道现在好些没有。哎，姐姐长这么漂亮，这体虚身弱，哎，对吧？"]], "form": "aps", "instruction": [["S1", "女性，青年（约18–40岁）；音高偏高；音量小；语速适中；标准普通话。"], ["S2", "男性，青年（约18–40岁）；音高偏高；音量适中；语速适中；标准普通话。"], ["S3", "男性，青少年；音高适中；音量适中；语速适中；标准普通话。"]]},
+    {"id": "bad520321d0a4280_D0000", "lang": "zh", "dur": "3:03", "dnsmos": 2.93, "audio": "assets/preview/bad520321d0a4280_D0000.m4a", "speakers": 3, "turns": [["S1", "不一会儿，小店里热气升腾，肉香四溢。二零一二年，杜宝柱在老街上开了一家卤肉店，附近的乡邻都是他的老主顾。 人们进店买肉，不问价格，不看斤两。这份默契和信任，源于十多年前的一件往事。"], ["S2", "这个拖拉的，它不沾油。"], ["S1", "杜宝柱还记得，有一年临近春节，生鸡的价格每只涨了四块钱，周边不少店铺都随之提高了价格。杜宝柱当时也跟着涨了价。有一天，店里来了一位老人，问了价格后，盘算了一下，还是转身走了。"], ["S2", "老主户一走，我心情不好。本来想吃个鸡的话，他不，他不买走的。你说咱能心情好嘞吧？常年照顾咱买卖，他一走，确实心里不是滋味。我就教会他了，我说这钱不能涨了。"], ["S3", "他买了。"], ["S2", "他买了，他很开心。哦，我看到他开心嘛，我也开心。"], ["S1", "杜宝柱的卤肉店刚刚开张的时候，父亲叮嘱他：做生意不能只看钱，一分利钱吃饱饭，十分利钱饿死人。平日里全靠乡亲们关照生意，小店才有着不错的收入。 如果还盯着春节期间的利润，想着再多赚一把，不仅寒了人心，也不是自己该走的正道。"], ["S2", "我说，咱挣的每一分钱，兑地地填，兑地地，兑地地，咱干了良心，问心无愧。我活的也坦了，你看我姓左，我觉着我都。 因为我这个杜姓，我就感到骄傲。从老辈儿里，从明代、清代有很多当官的。虽然我做的是小生意，但是这个祖训我不能忘。我挣的每一分钱，我就说也对得起老祖宗，堂堂正正做人。"], ["S1", "从那天起，杜宝柱给自己立下一条规矩：不仅要卖放心肉，节假日也不能随意涨价。卤肉店来的都是左邻右舍，平时人家照顾生意，靠的就是一份信任。 逢年过节不涨价，大家买的舒心，吃的踏实，节后照样来。"], ["S2", "那姐姐也干啥？"], ["S1", "日子长了，口碑就攒下了，回头客越来越多，收入水涨船高。"], ["S3", "在今天的杜家人身上，我看到了家风活在当下的力量。那些历史上的故事、族谱上的家训，对他们而言，从来不是抽象遥远的文字，而是一句句能够指引人生的箴言。 心正则人正，人正则事正。这份信念也指引着每一位杜家人在人生路上行稳致远，阔步向前。"]], "form": "dsd", "instruction": [["S1", "A medium-pitched male voice speaking standard Mandarin at a measured pace and moderate volume, with a neutral and composed emotional undertone that suggests a calm and reserved temperament."], ["S2", "A medium-pitched male voice speaking with a Jiao-Liao accent at a fast pace and moderate volume, expressing a cheerful and lively emotional undertone that conveys an energetic and sociable character."], ["S3", "A high-pitched female voice speaking standard Mandarin at a measured pace and moderate volume, radiating a warm and upbeat emotional undertone that suggests a friendly and approachable temperament."]]},
+    {"id": "c2ef73c2d9248cd9_D0001", "lang": "zh", "dur": "1:14", "dnsmos": 2.9, "audio": "assets/preview/c2ef73c2d9248cd9_D0001.m4a", "speakers": 2, "turns": [["S1", "不好意思，不好意思。"], ["S2", "你是悠悠的爸爸吧？"], ["S1", "啊是是是，抱歉，还在开玩笑。这几天到处给我找老伴。"], ["S2", "没事，没事，都能理解。"], ["S1", "呃，那既然是相亲，我就把我的条件说一下。哎，我叫风一，送外卖的。啊，这一个月拼死拼活，也就几千块钱。我相亲对象嫌我穷，都跑了。"], ["S2", "送外卖挺好的，只要是踏踏实实赚钱啊，就都不丢人。况且我也没资格说你，我也只是个保洁而已。"], ["S1", "再说了，我也没什么积蓄，房子、车子可都没有。"], ["S2", "这些都是次要的。你看我穷了大半辈子了，这不过得也挺好的嘛。就是想着子女们都大了，成家立业了，就想着找个踏实可靠的老伴，相互扶持，将来也不给子女们添麻烦。"], ["S1", "你说的也有道理，呃，行，那个先不说了，呃，你还没吃中午饭吧？服务员啊。"]], "form": "rp", "instruction": [["S1", "Stand at the edge of a fog-draped pier, voice steady and resonant, each word cast like a stone into the stillness, measured and calm as the tide waits to answer."], ["S2", "Float through a sunlit greenhouse, laughter bubbling in the air, voice bright and buoyant as petals unfurl in slow motion, every syllable a bloom."]]},
+    {"id": "af680581ee106888_D0005", "lang": "zh", "dur": "1:28", "dnsmos": 2.97, "audio": "assets/preview/af680581ee106888_D0005.m4a", "speakers": 2, "turns": [["S1", "你那样是过度攻击了。刚才的狗头人，在第一下线性攻击的时候，就几乎濒临死亡了。"], ["S2", "是那时候那个人。"], ["S1", "最后一集没必要用剑技，只要普通攻击就可以解决他了。"], ["S2", "他没认出我吗？过度攻击有什么关系吗？"], ["S1", "考虑到回程的体力，还是采取不会过于疲累的战斗方式比较好。"], ["S2", "回城的体力。"], ["S1", "没错，光是走出迷宫就要花上将近一个小时，而且要到最近的城镇，再快也要三十分钟吧。要是太累的话，容易产生失误。我看你应该是独行玩家，只有一个人的话，就算是小失误也可能会致命。"], ["S2", "这件事用不着你费心，反正我不打算回去。"], ["S1", "啊，你是说不打算回镇上吗？可是需要补给药水，也要修理装备，还有睡觉。"], ["S2", "只要不受伤的话，就不需要药水了。而且我买了五把相同的剑，另外我有在附近的安全地带休息。"], ["S1", "你到底狩猎几个小时了？"], ["S2", "三天了吧，还是四天？你问完了没有？"], ["S1", "要是你继续用这种战斗方式，会死的。"], ["S2", "反正大家都逃不过一死，光一个月就死了将近两千人，可是却连第一层关卡都还没突破，这个游戏根本就不可能破关。会以什么方式死在哪里，根本只是时间早晚的差别。"]], "form": "free", "instruction": [["S1", "A young adult male with a medium-pitched, loud, and fast-paced voice speaks in standard Mandarin with a neutral, matter-of-fact tone, conveying information in a clear and direct manner, as if instructing or advising someone in a competitive gaming context."], ["S2", "A young adult female with a high-pitched, loud, and measured voice speaks in standard Mandarin with a subdued, sad tone, expressing resignation and emotional fatigue, as if responding to criticism while reflecting on personal hardship in a solitary gaming scenario."]]},
+  ],
+};
+const NV_PREVIEW = {
+  short: [
+    {"id": "07d9e6217a3aa5d7_240_000", "lang": "zh", "dur": "0:04", "dnsmos": 3.38, "audio": "assets/preview/07d9e6217a3aa5d7_240_000.m4a", "text": "这首歌的色彩它就是落寞[Tsk]孤独", "nv": {"Tsk": 1}},
+    {"id": "524690d55b65ea2a_1418_000", "lang": "zh", "dur": "0:05", "dnsmos": 3.43, "audio": "assets/preview/524690d55b65ea2a_1418_000.m4a", "text": "[Shh]不能告诉其他人这件事我只跟你说", "nv": {"Shh": 1}},
+    {"id": "1d11460a0ef88c4d_000_000", "lang": "zh", "dur": "0:04", "dnsmos": 3.25, "audio": "assets/preview/1d11460a0ef88c4d_000_000.m4a", "text": "[Question-yi]奇迹城堡这是什么地方", "nv": {"Question-yi": 1}},
+    {"id": "7edafbe8b280077a_1374_000", "lang": "zh", "dur": "0:07", "dnsmos": 3.42, "audio": "assets/preview/7edafbe8b280077a_1374_000.m4a", "text": "努尔哈赤你如果不愿意做我的女婿[Dissatisfaction-hnn]我就宰了你", "nv": {"Dissatisfaction-hnn": 1}},
+    {"id": "92b36619365ae546_120_000", "lang": "en", "dur": "0:05", "dnsmos": 3.36, "audio": "assets/preview/92b36619365ae546_120_000.m4a", "text": "thing is they see my men of course theyre run a mile So maybe you two head off[Question-huh]", "nv": {"Question-huh": 1}},
+    {"id": "baa2e5bddaf5366d_1043_000", "lang": "zh", "dur": "0:09", "dnsmos": 3.37, "audio": "assets/preview/baa2e5bddaf5366d_1043_000.m4a", "text": "[Question-oh]这个乌鸦遭到后排了[Surprise-yo]那还行啊遭到后排感觉还可以", "nv": {"Question-oh": 1, "Surprise-yo": 1}},
+    {"id": "e7b52b1f7f766a41_2969_000", "lang": "zh", "dur": "0:05", "dnsmos": 3.46, "audio": "assets/preview/e7b52b1f7f766a41_2969_000.m4a", "text": "[Sigh]得捡点包这个不捡包过不去了", "nv": {"Sigh": 1}},
+    {"id": "eb310bc5b8476537_191_000", "lang": "zh", "dur": "0:04", "dnsmos": 3.36, "audio": "assets/preview/eb310bc5b8476537_191_000.m4a", "text": "致名[Cough]治愈四名长生迹症病人OK好的", "nv": {"Cough": 1}},
+    {"id": "78249b7e8589fce3_703_001", "lang": "en", "dur": "0:04", "dnsmos": 3.3, "audio": "assets/preview/78249b7e8589fce3_703_001.m4a", "text": "[Uhm] [Laughter] Falcon what do you think any last thoughts anything else that's come to mind that we haven't covered", "nv": {"Uhm": 1, "Laughter": 1}},
+  ],
+  long: [
+    {"id": "1ebb9222db42832e_L0000", "lang": "zh", "dur": "1:24", "dnsmos": 3.39, "audio": "assets/preview/1ebb9222db42832e_L0000.m4a", "text": "它这个包里好像是加了一个特殊的材质包，就是跟那个官方宣传图上的材质是一样的了。等我这深色原木，我这是我这是出生在等等樱花树，这什么群系？先来点西瓜籽。 这是一个以Alex洞穴和生物啊，啦啦啦啦啦做的一堆的扩展包，感觉还不错，挺好玩的。 生物们有等级，最高二十级。生物会根据出生点的距离来获得等级，越远越高。 不过不用担心二十级僵尸只有三十曲只是一点点小挑战[Surprise-oh] OK 现在灯笼可以放在饰品栏腰带上[Surprise-oh]移动光源这熊猫像是被人饲养的真的雨林村民是你们养的吗[Question-yi]它不会咬我吧 你要这还有老虎，可还行？往往那边走着看吧。有吃的的话，我就搞点吃的，然后再去下矿。别我这样啥都不拿下矿，合理多了。 [Surprise-oh]看到有干草块了行了不用吃不用不不用不用啃西瓜了[Surprise-yo][Surprise-wa] 这有背包吗？有，先做个背包。哦，他他他攻攻击是那种左右挥剑的那种攻击方式的。先去找牛。这边这个城堡是什么东西？做个防身的武器。", "nv": {"Surprise-oh": 3, "Question-yi": 1, "Surprise-yo": 1, "Surprise-wa": 1}, "nv_segments": [[27.29, 31.57, null, ["Surprise-oh"]], [31.93, 45.59, null, ["Surprise-oh", "Question-yi"]], [60.34, 65.35, null, ["Surprise-oh", "Surprise-yo", "Surprise-wa"]]]},
+    {"id": "983996e79a18ed19_L0003", "lang": "zh", "dur": "0:45", "dnsmos": 3.09, "audio": "assets/preview/983996e79a18ed19_L0003.m4a", "text": "你敲个零啊，我们呢就准备开始讲这个今天的寒假课的第一讲知识点呢。 没有问题吗[Dissatisfaction-hnn]好 [Uhm]那就希望努力的就说这个如果你真的能够把高点意识的不等式板块学好 那么，我相信你回到学校，你感到自己是所向披靡。 你你你你的你的这个这个这个。 这个气场就不一样了[Surprise-ah]你感到走走在这个这个这个学校的这个道路上都是这个这个呼呼声风的[Surprise-ah]我这个这个这背后有强大的这个数学支撑着你是吧 [Surprise-ah]大概是这的 好那么今天呢我们来学习第一讲啊[Uhm]不等式的基本证明方法", "nv": {"Surprise-ah": 3, "Uhm": 2, "Dissatisfaction-hnn": 1}, "nv_segments": [[8.15, 11.86, null, ["Dissatisfaction-hnn"]], [12.2, 17.84, null, ["Uhm"]], [25.63, 38.12, null, ["Surprise-ah", "Surprise-ah"]], [38.38, 39.44, null, ["Surprise-ah"]], [39.78, 44.6, null, ["Uhm"]]]},
+    {"id": "5f9d10baa744499d_L0006_p0", "lang": "zh", "dur": "2:27", "dnsmos": 3.19, "audio": "assets/preview/5f9d10baa744499d_L0006_p0.m4a", "text": "一切发生的比你想象中要快，你。 [Surprise-oh][Surprise-oh]还好还好我不不是帕沙死[Surprise-ah]帕沙从自己的这个裤腰带中掏出一把枪看都没看 就像身后开枪了又一颗子弹向它飞来而它只是歪头躲避好酷啊帕沙[Surprise-oh]不对对对面是我们的人我我在鼓掌什么呢对面是我们美国美国的这个特工啊 子弹穿过他前方的一根管子。 撞击在空心金属管上发出巨大的声响[Breathing]让你急忙趴到地上护出头部以免跳弹伤到你从你的判断来看帕沙击中了他的目标而那枪手并没有那男人举着自己的手臂尖叫着鲜血 从枪伤处喷涌而出，顺着他的手臂流下，他的枪掉在了地上。 我很抱歉，如果你认为你可以伏击到我的话，那你就错了。 帕莎站起来，一边说着，一边走近他，背紧贴着墙，就像一只捕食者在追捕走投无路的猎物一样。 他毫不犹豫的一枪打爆了他的头，head shot，点点点，这这，我我是该叫好还是该怎么样？一边是我爱的人，一边是我娘家人，哎。 [Uhm]不知道你的心跳在极度恐惧中加速呼吸很不连贯就好像你在试图让自己的肺里有越来越多的氧气小心呼吸性减中毒 你刚刚目睹了一个活生生的人在你眼前死去。哎呀！ 胆汁从喉咙里涌上来，几乎就要呕吐了。帕帕莎，这这叫带血白玫瑰。 依然美丽动人。 当帕莎转过身来看到你惊恐的蜷缩在地板上的时候，他眼中的冰冷和算计融化了。 变成了他一贯担忧的表情。没关系，没关系的，我不会伤害你的。刚刚那个人是在埋伏我，他是想要。 然后他的手机响了，你觉得这是你第一次听到他的电话声？他打开扩音器，悄悄的。 对你做了一个稀的手势[Question-oh]新新角色吗问问问帕沙 We were ambushed. No shit, Sherlock. Said too late. 是的，我在自助洗衣店里，我刚干掉了一个持枪的人，请派个清理人员过来。是的，现在之后先在基地集合。好的，还有帕莎，有目击者吗？ 他用几乎恳求的表情看着你。我是一个死人，我是一个死人。帕莎不是说了吗？有时候活人也有可能是幽灵。I'm a ghost。", "nv": {"Surprise-oh": 3, "Surprise-ah": 1, "Breathing": 1, "Uhm": 1, "Question-oh": 1}, "nv_segments": [[2.98, 10.88, null, ["Surprise-oh", "Surprise-oh", "Surprise-ah"]], [11.25, 23.48, null, ["Surprise-oh"]], [26.93, 42.08, null, ["Breathing"]], [73.5, 81.88, null, ["Uhm"]], [117.77, 122.64, null, ["Question-oh"]]]},
+    {"id": "29f940ffcaa7fa69_L0009", "lang": "zh", "dur": "2:02", "dnsmos": 3.21, "audio": "assets/preview/29f940ffcaa7fa69_L0009.m4a", "text": "当然，李斯特还有一个特别的贡献，就是从李斯特开始，古典音乐终于有了姓名。就之前那些古典乐，几乎就是用编号来起名字的啊，比如巴赫的曲目都是B W V几几几啊，然后贝多芬都是什么第几交响曲啊，帕格尼尼就是什么二十四随想曲等等等等啊。这里说一下，就是圈子里的一个小魔咒。 就由于贝多芬写完第九个交响曲之后就死了嘛，第十个刚开始写就死了，所以从他之后啊，一般的作曲家一生之内不会超过九部交响乐，如果超过就离死不远了。 贝多芬可真是个怨念极深的厉鬼呢。 反正就看之前这些作家写名字，就可想而知啊，这这些艺术家就对语言文字的匮乏。 啊，到了李斯特才开始觉得啊，名字真的很重要。当然了，除了李斯特啊，浪漫主义还有很多很厉害的人啊，比如肖邦啊、马勒啊等等等等。包括到了德彪西啊，开始什么印象派这个派那个派的啊。我们在这里时间有限，就先不讲了。 之前看网上都说那个啊马勒听得上瘾[Sigh]说实话[Uhm] 我没什么感觉，我觉得马勒呢，多少是有点浪漫的感觉在身上的啊，但是吧。 怎么形容呢？一听就能听出来是一个特别厉害的指挥家，但是吧，就浪漫的状态也是那种很直男的那种浪漫，所以呢，他的音乐我也。 不是很能完全get到。 现代音乐一般被认定为二十世纪或者二十世纪至今的啊一种音乐形式，在我的视角里，最具代表性的音乐家就是斯特拉文斯基，最著名的就是那个《春之祭》啊，想必大家都应该有所耳闻。就关于《春之祭》之前啊，斯特拉文斯基已经有两部口碑不错的啊先进派的芭蕾舞剧。 啊，一部是《火鸟》，一部是《Patricia》。《火鸟》我觉得还是不错的啊。这里我给大家放一个钢琴版本啊，是我个人非常喜欢的一个钢琴家啊，阿格里奇演绎的。 这里给大家对比一下阿格里奇的钢琴版《火鸟》和原版的交响乐。", "nv": {"Sigh": 1, "Uhm": 1}, "nv_segments": [[55.18, 61.51, null, ["Sigh", "Uhm"]]]},
+    {"id": "8cb0633a72836dca_L0000_p0", "lang": "en", "dur": "1:46", "dnsmos": 3.06, "audio": "assets/preview/8cb0633a72836dca_L0000_p0.m4a", "text": "Brandy Glanville is at the center of a new Bravo lawsuit as Ariana Maddox opens up about Pump Rules filming conditions. I hope you guys are ready for it because we're gonna dive into all the takes. You're listening to No Filter with Zach Peter, your go-to source for all the latest pop culture and reality TV. Surf fresh all week long. Now. Let's dive in. Hello, everybody. Happy Monday! It's the start of a new week. And we've got so much to break down. I don't know if anybody tuned into the. Real housewives of New York Reunion [Breathing] I sure did it[Uhm] but I've been seeing little snippets about it Is anybody is it that good I feel like nobody's really talking about how good it is Everyone's just kind of like [Surprise-oh] it happened [Uhm] but if you've seen it let me know if it's worth investing my time I did watch into the finale [Sigh] You know New York is just It's[Sigh] It's nothing. Groundbreaking. It's nothing like Uber exciting. It's not something that I'm like on the edge of my seat, eagerly anticipating every week. So. I'm sure it'll get a second season. I'm sure it'll keep going, Jenna Lyons. I mean, it's pretty obvious that she's not coming back. Put some respect to my name. I called it. I said going into the season that I didn't think that she would last. [Uhm] and now it kind of seems like she I mean from what I've seen she doesn't seem like she's interested in being at the reunion She doesn't seem like she's like okay I did this I signed up for it I'm fulfilling my contract because that's what I got to do [Breathing] But Um. Okay. Well. Thank you, New York, for a good first season. I think we have what part two of the reunion that's airing this upcoming weekend. Fine. Cute, sure. They're they're really trying to make New York happen, and I'm just like, um, it is the 25th anniversary of.", "nv": {"Uhm": 3, "Breathing": 2, "Sigh": 2, "Surprise-oh": 1}, "nv_segments": [[33.86, 40.46, null, ["Breathing", "Uhm"]], [40.54, 46.1, null, ["Surprise-oh"]], [46.28, 51.23, null, ["Uhm"]], [52.23, 54.37, null, ["Sigh"]], [54.75, 55.75, null, ["Sigh"]], [77.45, 89.27, null, ["Uhm", "Breathing"]]]},
+    {"id": "3d8f32c5ed4f07c3_L0000", "lang": "zh", "dur": "2:11", "dnsmos": 3.11, "audio": "assets/preview/3d8f32c5ed4f07c3_L0000.m4a", "text": "哎呀，各位老哥好啊！今天的话又是出来出差了。 给各位老哥看一下，我这个平时出来出差所带的一些装备。 就是温武改装以后的这样一个小型的一个工作站看我是怎么去使用它的首先[Cough]这是我的一个手提包啊这里面放的我绝大部分的那个数码相关的一些产品当然我还会有一个背包 这个具体看情况了。背包里面我放一些换洗的衣物在里头，我们可以看一下，看我这里面装了些啥。首先，它有个小侧包，侧包我会放一个这个红墨的一个充电宝。这个充电宝的话，我大部分时间是给手机充电啊。 偶尔的话，给那个主机充电，它也可以用，因为它支持 PD 协议的，能够四十五瓦的一个输出，而且有一万毫安时的一个电池。 而且是铝合金外壳，这个东西确实蛮好的，我经常在用，放一旁。那我们把这个拉链打开。 然后里面打开之我放了一对量殖精金三的jo控手柄[Surprise-ah]这个我给放一旁 这个可以给手机充电，也可以给这个主机充电。 固态U盘，这个我也给自己备了一个，要用来有时候拷贝文件用。然后有一个热成像，这个出差的话有时候会用到的，可以看一些热源，或者说是看一下主机的一个发热情况，或者是用来检修。 然后上面的话，我放了一个适配器，这个适配器的话，主要用来玩Joy康手柄，就比如说我要用这个头大屏幕，我要接上我的主机，我要想躺床上玩或者搁远一点，那我就要用到这个东西，到时候可以看一下。然后这边的话是一个Type C一个拓展坞。 这个的话就随意了我随便带了一个有个HD MA输出[Uhm]上个USB接口还有个type C这个也可以充电然后这边放了一把小型螺丝刀", "nv": {"Cough": 1, "Surprise-ah": 1, "Uhm": 1}, "nv_segments": [[9.7, 24.34, null, ["Cough"]], [57.53, 65.12, null, ["Surprise-ah"]], [119.3, 130.9, null, ["Uhm"]]]},
+    {"id": "3ec5fc24d131c477_L0004", "lang": "en", "dur": "0:46", "dnsmos": 3.42, "audio": "assets/preview/3ec5fc24d131c477_L0004.m4a", "text": "And my stereo bus is still in slightly in the red So that's kind of the way I do it on a daily basis[Breathing] just a few moments on the front end and everything's just bam bam everything's just clicking [Breathing] And so it's a big deal It's a big deal towards your success and your ultimate success even though it seems Like it's just it seems unsexy compared to like hey look at this new plug that does[Breathing] all this fancy crap and it's it's the missing link [Laughter] you know[Breathing] the missing link could be just simple game staging Alright guys I hope you enjoyed it I know I did Thank you for joining me and I never say this but If you enjoy our videos on YouTube go in and like and subscribe to my channel I'd appreciate that All right guys Take care", "nv": {"Breathing": 4, "Laughter": 1}, "nv_segments": [[0.0, 17.21, null, ["Breathing", "Breathing"]], [17.22, 45.86, null, ["Breathing", "Laughter", "Breathing"]]]},
+  ],
+  dialogue: [
+    {"id": "2b25db238dc6afe2_D0000", "lang": "zh", "dur": "3:36", "dnsmos": 3.03, "audio": "assets/preview/2b25db238dc6afe2_D0000.m4a", "speakers": 4, "turns": [["S1", "这些是在一些社交媒体上最受欢迎的动画视频，每个视频呢都有数百万的浏览量，这些浏览量呢就意味着数千美元的创作收入。这些视频通过Audience TikTok创作者计划或者是一些付费赞助获得收益。 这些动画呢，就是最好的娱乐吸引观众的方式。很多呢都至少看过一次这些视频，因为呢只有少数创作者在做这个细分市场，所以呢竞争较小。浏览如此之多的原因呢，是人们看这些视频呢基本上都是完整观看。"], ["S2", "Come on! Give it back."], ["S3", "First, you gotta say my name."], ["S2", "All right, Big Daddy. Come on now, give it back."], ["S3", "My name."], ["S1", "事实上啊，有些人呢会一遍一遍的观看这些视频，这使得YouTube或者是TikTok将这些视频呢会推向更多的观众，从而为创作者就带来更多的收入。而这些动画呢，总共呢有三种类型，其中呢只有一种是完全免费和容易制作的。 这就是本期视频要给大家介绍的。"], ["S4", "moom did you change the w- password [Surprise-oh] yeah I did The new password is one two three four five six Okay thanks It didn't work [Question-huh] What did you type One two three four five six No it's one two three four five six"], ["S1", "本期视频呢，我们要免费制作这种动画，这是非常容易的，而且呢不需要额外支付任何费用。另外呢，你可以随心所欲的制作视频。 大家呢一定要完整观看本期视频，不要错过任何的细节，也请点赞订阅一下梦想总数的频道。现在让我们开始吧。第二步呢是去了这个叫做 Adobe Express Animator 的网站，这个它的 logo 啊就是这么一个样子，Adobe 的 logo 在左上角，大家一定要看清楚，不要搞错了。 然后呢，只需要点击这个加号图标，然后呢，移动到快速操作选项卡。 然后呢，向下滚动，然后呢，直到找到这个要音频生成动画的选项，并单击它，往下面拉一下，然后就是这个 animate from video 这个选项，然后单击它一下，然后就会跳转到这个界面，我们呢会在这里做大部分的简单的操作，正如你所看到的。 你呢可以让所有这些角色说话，这里有很多的角色，然后单击分类，你呢就可以从这些角色当中选择，比如说emoji、动物、人物以及其他的。但今天呢，我们来这里是为了这个Sticks的角色，那么选择它，然后点击这个背景标签。 然后这个[Uhm]点击背景标签之后呢就可以为你的角色然后选择一个合适的背景而后这些背景呢也包括很多场景比如说教室啊沙漠城市甚至天空大家呢可以尝试不同的背景也可以尝试一些不同的场景 这样呢，就会让视频呢更加的独特了。然后呢，让我们在这里来选择这个教室这个场景，好调整一下，先调整一下这个人物角色的大小。好，接下来呢，我们单击这个塞子大小，用选择想要尺寸。然后呢，我们需要一个免费的文本转语音的网站来生成动音频。 我们呢要将要使用完全免费的网站这次呢需要注册然后每次转换呢将获得两千个级[Uhm] word时长你呢可以免费使用它所以呢只要去角色声音部分然后通过预览它们的选择一个你喜欢的声音就我这为呢就选择这个G这个声音然后呢我们需要生成音频的文本 只要趣的巧了接P它能给我五个和有趣相关的些笑话[Breathing]和往常一样下了GP就会给我们答案"]], "nv": {"Uhm": 2, "Surprise-oh": 1, "Question-huh": 1, "Breathing": 1}, "nv_segments": [[59.92, 77.92, "S4", ["Surprise-oh", "Question-huh"]], [150.29, 167.56, "S1", ["Uhm"]], [188.4, 207.76, "S1", ["Uhm"]], [208.16, 215.9, "S1", ["Breathing"]]]},
+    {"id": "d8ba112a56881377_D0001", "lang": "en", "dur": "2:20", "dnsmos": 3.0, "audio": "assets/preview/d8ba112a56881377_D0001.m4a", "speakers": 2, "turns": [["S1", "Not very refined taste in space games, then fine, sure, you know, make your money. the The free market is all about matching people making a product to the people who want to pay it, and then that the price and availability negotiation is just between those two parties. So, hey, if if they found a way to do it, God bless them. Like Star Citizen, you know, I think it's dumb. But there are people out there with a lot of money that want that experience and Robert Space Industries is the only one trying to provide it right now I don't know what kind of experience Starfield is providing [Uhm] or what like market niche they hopefully have found for their sakes but Hey, if seven dollar DLC is how they're gonna make Starfield a success, and it goes on to like fund improvements to that game, great. Doesn't have anything to do with me. Doesn't hurt me. Well, actually, my depending on the how Game Pass goes, but."], ["S2", "Well, that see. Here's the thing, though. It might establish industry trend. I mean, it already is establishing industry trends. Yeah so and again that's the like that's what I mean is like whenever you say I'm not not you personally but let's say the audience says I'm not going to buy the $7 DLC You have to tell your friends not to do it too You do You have to [Uhm] Review bombing is great We know that it works at least a little bit because the hell diver's right But but you have to tell your friends and everybody else that you know you don't do this because the next Bethesda game when they release Elder Scrolls Six they're going to be charging us five dollars a quest right so like you got to you have to make sure tell everybody not to do that."], ["S1", "You'd remember horse armor all the way back."], ["S2", "Of course, I do. Bethesda was there at the beginning."], ["S1", "it was there at the beginning of all things [Question-huh]"], ["S2", "Good for them. That was fun."], ["S1", "That was two fifty, I think, two fifty and and two thousand five dollars for horse armor."], ["S2", "Oh man! Well, you know what? Again, just just not only should you be careful with your money, but then you should maybe start trying to talk to other people and be like, \"Yo, this is this is not good. This might set bad industry trends.\""], ["S1", "Hey speakingea of[Uhm] speaking of positive trends we got a lot of patrons that are very shrewd with their money because they only spend it clearly on the finest internet games coverage So thank you very much for that Christian Morgan Anderserson E And S Compton Kyle Hayton and Brian Cosner Thank you very much"], ["S2", "Yeah they're supporting our Patreon[Uhm] The finest internet games coverage is Lawrence referred to us well [Breathing] and somehow we're providing more return on investment than Bethesda Even Is that possible Are we doing that actually[Uhm] we have these other people to thank Crraabfoone Mason Hoover Ryan Aairberryrry and Sherwin Sanchez Thank you very much"]], "nv": {"Uhm": 5, "Question-huh": 1, "Breathing": 1}, "nv_segments": [[18.38, 32.39, "S1", ["Uhm"]], [51.78, 68.33, "S2", ["Uhm"]], [86.66, 88.9, "S1", ["Question-huh"]], [106.6, 121.9, "S1", ["Uhm"]], [121.9, 139.66, "S2", ["Uhm", "Breathing", "Uhm"]]]},
+    {"id": "a5a7aa1acdd05f3c_D0002", "lang": "zh", "dur": "2:22", "dnsmos": 2.76, "audio": "assets/preview/a5a7aa1acdd05f3c_D0002.m4a", "speakers": 3, "turns": [["S1", "去告诉那些驾着铁甲炮船的英国人、美国人，不准他们随便闯到长江来窥视天朝。"], ["S2", "我我不不不明白，天王，你指的是是什么？"], ["S1", "令李爱卿，你来告诉他。"], ["S3", "[Surprise-ah][Uhm]前几天英国公使文翰带着两艘英国的军舰打着中立旗号闯入镇江江面太平军命令他们离开他们尽敢开炮天王为此恼火也命令炮台士兵向英国的军舰开炮 这样一来[Breathing]他们才不得不退出了长江口"], ["S2", "我我只是只是代上帝传言的教士，我管不着大英大英帝国的事情。不过我可以为天王尽一言：如果他们再敢来进犯长江口，你就用大炮把他们。"], ["S1", "好啊，好啊！你是真正的朋友啊，你是洋人里最公道的朋友。"], ["S2", "这是自然的嘛！如果你们太平天国的军舰随便开到泰晤士河去，英国人会答应吗？"], ["S1", "对呀[Laughter]好你今天不要走了真宴请你"], ["S2", "我非常高兴，不过我我我我有一个请求，能不能只上三道菜，最多四道，不能再多了，我害怕呀。"], ["S1", "吃饭怕什么？"], ["S3", "天王前几天在镇江的时候罗大刚丞相请鲁维连先生吃了一顿[Uhm]上了二十六道菜桌子上堆成了小山他说他是被吓坏了"], ["S1", "那真也不能薄待你啊中国是个礼仪之邦嘛[Laughter]真听凌厉说你们洋人很小气啊来了客人上些什么芹菜胡萝卜上面还椒点酱 这也算一道菜[Laughter]这和我们喂兔子差不多"]], "nv": {"Laughter": 3, "Uhm": 2, "Surprise-ah": 1, "Breathing": 1}, "nv_segments": [[14.98, 34.86, "S3", ["Surprise-ah", "Uhm"]], [35.06, 39.46, "S3", ["Breathing"]], [76.78, 82.74, "S1", ["Laughter"]], [98.96, 113.0, "S3", ["Uhm"]], [117.06, 136.7, "S1", ["Laughter"]], [137.08, 142.28, "S1", ["Laughter"]]]},
+    {"id": "a310b069221c138c_D0015", "lang": "zh", "dur": "1:26", "dnsmos": 2.93, "audio": "assets/preview/a310b069221c138c_D0015.m4a", "speakers": 3, "turns": [["S1", "有点不小心吧就是这两个大军肯定得得得留着的然后[Uhm]走走小马顺是"], ["S2", "有一说一，感觉这个波斯已经给机会了。这个粮，说实话，收益真的很低。看这几个资源，现在吃了三点。"], ["S1", "不是很低吧？这个粮现在还没有收益呢。"], ["S2", "[Surprise-oh]是的而且不过他出工人"], ["S3", "其实他点什么都不影响这这一波的。"], ["S2", "[Uhm]他点墨的话可能会加快一下那个什么加快一下这个"], ["S3", "对，快一T，快一T，那个挂头是吧？"], ["S2", "快递拿到瓜头，而且后面。"], ["S1", "真的是，就是直接直接走炼铁，站好两个铁剑就可以，可以先不理他了。"], ["S3", "这个这巴比伦有有地方跑移民吗？"], ["S2", "这个移民。"], ["S1", "右边那个。"], ["S2", "うん。"], ["S3", "一直往右走，能跑掉吗？"], ["S2", "一直往右走是可以的，但是非常非常远，就看这边会不会吐蕃过来蹲一下，蹲一下，然后再我旁边这边城邦的话，可能会把这边路全部卡死。"], ["S1", "我觉得真真实的能跑的方法是征兵[Breathing]征兵大方"], ["S2", "红花修路，这个过不去吧？这个会被军营自由C掉。对，这个路。"]], "nv": {"Uhm": 2, "Surprise-oh": 1, "Breathing": 1}, "nv_segments": [[0.0, 9.95, "S1", ["Uhm"]], [21.17, 23.31, "S2", ["Surprise-oh"]], [28.69, 32.75, "S2", ["Uhm"]], [71.89, 77.83, "S1", ["Breathing"]]]},
+    {"id": "1619bd91a09b04ef_D0000", "lang": "en", "dur": "3:04", "dnsmos": 2.91, "audio": "assets/preview/1619bd91a09b04ef_D0000.m4a", "speakers": 3, "turns": [["S1", "I'd go to set some days, and I'd be very anxious about having a scene with her because she had a bad day. She made it a bad day for everybody."], ["S2", "Yikes this does not sound good So Emmama Kkeninney dropped by the call me daddy podcast Yeah that's what it's called[Breathing] and admitted it often wasn't easy being around any Rassum on set of shameless"], ["S1", "There were times where she would try to be a good influence and then there were times where she would be blatantly giving me[Uhm] bad Not the best advice And maybe she was struggling with her own inner[Breathing] problems and taking it out on other people But We all[Uhm] handled situations differently Growing up I definitely took note from not just her in particular but [Breathing] people of things I want to carry on in my life and things I do not want to carry on in my life"], ["S2", "Emma also says that the tone shifted on set after Emmy left the show in season nine."], ["S1", "This step became a little bit more of a positive place I'm not going to lie I have a lot of love for Emmy Like I've known her for so long We haven't spoken in years We're not like you know But that's okay Like I have a lot of love for her and I [Breathing] I hope that she finds her happiness"], ["S2", "Emma also says that even though there was a thirteen year age gap between them [Breathing] there was an odd competitive dynamic to their relationship"], ["S1", "I felt that dynamic for sure and I never understood it because[Breathing] I was nine and she was like over ten years older than me So I'm like why is there a weird competition here when [Breathing] I'm not trying to compete I don't know if it was other people on set creating that or if it was her creating it"], ["S3", "Yeah."], ["S1", "But I know I wasn't creating it."], ["S2", "When Emma starts talking about Emmy in this podcast, it takes her a while to get there. But once she starts saying that if Emmy was having a bad day, everyone had to have a bad day on set, and the set was better after Emmy left the show, those are pretty cutting words. Like this is like Leah Michelle level to me. It's really disappointing to hear. If it ends up all being true, I don't know if Emmy's going to have to have a response to this. But it's pretty disappointing. I mean, we've heard stories of other actors as well. I mean. Myself working in the entertainment news industry and other TV shows [Breathing] that yeah there's certain egos that you have to deal with that's just really sad and it's interesting when she talks with the competitive nature of her relationship with Emmy that she wasn't really sure where that came from I've experienced that time and time again. That a lot of people feel threatened by you as you try to make your own career work. And yeah, like she says, it's not about being competitive. It's just there's room for everybody, and the fact that some people get kind of on edge. And know worried about you that you're going to comfort for their job It almost it shows their insecurity about it themselves So it's really sad to hear So[Breathing] this is really surprising information to learn about the set of shameless and how Em acted We'll see if Emmy has a response to this. But yeah, what's your reaction to Emma saying all the stuff about Emmy on set of Shameless?"]], "nv": {"Breathing": 9, "Uhm": 2}, "nv_segments": [[6.65, 18.99, "S2", ["Breathing"]], [19.17, 34.41, "S1", ["Uhm", "Breathing"]], [34.91, 47.33, "S1", ["Uhm", "Breathing"]], [53.23, 71.05, "S1", ["Breathing"]], [71.25, 79.03, "S2", ["Breathing"]], [79.25, 97.17, "S1", ["Breathing", "Breathing"]], [129.57, 145.75, "S2", ["Breathing"]], [161.71, 176.55, "S2", ["Breathing"]]]},
+    {"id": "79ecd7a098820233_D0003", "lang": "en", "dur": "2:03", "dnsmos": 3.22, "audio": "assets/preview/79ecd7a098820233_D0003.m4a", "speakers": 2, "turns": [["S1", "So another characteristic of extraordinary altruists that you identified was a dramatically reduced tendency[Breathing] to engage in what psychologists call social discounting what is social discounting hobby"], ["S2", "So social discounting reflects how [Breathing] you value other people's outcome as a function of their social distance from you basically how much are you willing to sacrifice to benefit another person And most people in standard social discounting tasks [Breathing] are very willing to sacrifice to benefit people close to them but their willingness to sacrifice drops dramatically hyperbolically [Breathing] as people become more socially distant"], ["S1", "So in other words, if I have you know a hundred dollars, sharing it with a partner or a parent or a child, very easy to do. Sharing it with someone whom I don't know at all, very unlikely I'm going to do it at all."], ["S2", "Exactly And across testing sessions and [Breathing] countries we see that people have a very limited desire to share resources to sacrifice to benefit people that they don't know or barely know"], ["S1", "And what did you find with the extraordinary altruists?"], ["S2", "When we tested the altruistic kidney donors and the social discounting task we found a curve unlike any that's ever been found in any social discounting task [Breathing] which was a curve that dropped almost not at all across social distances  So people who donate kidneys to strangers Are willing to sacrifice as much to help a stranger as most people are willing to sacrifice to help somewhere between a distant friend and an acquaintance, even though they don't know that person at all. That person's welfare clearly intrinsically matters to them."], ["S1", "So in other words, it's almost as if the circle of who they thought as being connected to them was just much, much larger."], ["S2", "Exactly They have a much wider circle of caring They view [Breathing] the outcome of people they've never met before as intrinsically valuable as something that it's worth caring about and worth sacrificing for"]], "nv": {"Breathing": 7}, "nv_segments": [[0.0, 12.24, "S1", ["Breathing"]], [13.14, 23.8, "S2", ["Breathing"]], [24.32, 38.0, "S2", ["Breathing", "Breathing"]], [51.28, 62.14, "S2", ["Breathing"]], [71.14, 86.7, "S2", ["Breathing"]], [112.04, 123.4, "S2", ["Breathing"]]]},
+  ],
+};
+const LANG_NAMES = { zh: "Chinese", en: "English", de: "German", ja: "Japanese", ar: "Arabic", ko: "Korean", es: "Spanish", fr: "French", ru: "Russian", hi: "Hindi" };
+const FORM_NAMES = { aps: "APS", dsd: "DSD", rp: "RP", free: "Free-form" };
+const FORM_TITLES = { aps: "Acoustic-parameter specification", dsd: "Descriptive-style directive", rp: "Role-play direction", free: "Free-form voice and scene description" };
+const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const withNV = (t) => esc(t).replace(/\[([^\]]+)\]/g, '<span class="nv">[$1]</span>');
+const spkColor = (sp) => VOICES[(parseInt(sp.replace(/\D/g, ""), 10) - 1) % VOICES.length] || "var(--ink-3)";
+
+function renderPreview(data, section, tabs, list, view) {
+  tabs.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === view)));
+  list.innerHTML = "";
+  list.scrollTop = 0;
+  const hasAnn = data[view].some((ex) => ex.nv || (ex.instruction && ex.instruction.length));
+  section.classList.toggle("pv-noann", !hasAnn);
+  data[view].forEach((ex, i) => {
+    const row = document.createElement("div");
+    row.className = "pv-row";
+    row.style.animationDelay = i * 50 + "ms";
+    const chips = [LANG_NAMES[ex.lang] || ex.lang, ex.dur || "—:—", ex.speakers ? `${ex.speakers} speakers` : "1 speaker"];
+    if (ex.dnsmos) chips.push(`DNSMOS ${ex.dnsmos.toFixed(2)}`);
+    let text;
+    if (ex.turns) {
+      text = ex.turns.map(([sp, t]) => `<div class="pv-turn"><span class="pv-spk" style="--c:${spkColor(sp)}">${sp}</span><span>${withNV(t)}</span></div>`).join("");
+    } else {
+      text = withNV(ex.text);
+    }
+    let ann;
+    let label = view === "dialogue" ? "Per-speaker instruction" : "Instruction";
+    if (ex.form) label += ` · <abbr title="${FORM_TITLES[ex.form]}">${FORM_NAMES[ex.form]}</abbr>`;
+    if (ex.nv) {
+      label = "NV events";
+      ann = nvEvents(ex);
+    } else if (!ex.instruction || !ex.instruction.length) {
+      ann = '<span class="pv-none">No instruction annotation</span>';
+    } else if (typeof ex.instruction === "string") {
+      ann = `<div><i>${esc(ex.instruction)}</i></div>`;
+    } else {
+      ann = ex.instruction.map(([k, t]) => `<div><span class="pv-t">${esc(k || "·")}</span><i>${esc(t)}</i></div>`).join("");
+    }
+    row.innerHTML = `
+      <div><div class="pv-id">${esc(ex.id)}</div><div class="pv-meta">${chips.map((c) => `<span class="pv-chip">${c}</span>`).join("")}</div></div>
+      <div class="pv-body"><div class="pv-text">${text}</div></div>
+      <div class="pv-ann"${hasAnn ? "" : " hidden"}><div class="pv-ann-label">${label}</div><div class="pv-ann-body">${ann}</div></div>`;
+    const body = row.querySelector(".pv-body");
+    body.insertBefore(buildPlayer(ex.audio), body.firstChild);
+    list.appendChild(row);
+    // Clamp long transcripts and instructions with a toggle
+    clampWithToggle(row.querySelector(".pv-text"), body, "Show full transcript");
+    if (hasAnn) clampWithToggle(row.querySelector(".pv-ann-body"), row.querySelector(".pv-ann"), ex.nv ? "Show all segments" : "Show full instruction");
+  });
+}
+// NV column: tag counts, then the speech segments that contain NV (segment span, not event boundaries)
+function nvEvents(ex) {
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const counts = Object.entries(ex.nv).sort((a, b) => b[1] - a[1])
+    .map(([t, n]) => `<span class="pv-chip">${esc(t)} ×${n}</span>`).join("");
+  const segs = (ex.nv_segments || []).map(([a, b, sp, tags]) =>
+    `<div class="pv-nv-seg"><span class="pv-t">${mmss(a)}–${mmss(b)}</span><span class="pv-spk" style="--c:${sp ? spkColor(sp) : "var(--ink-3)"}">${sp ? esc(sp) : ""}</span><span>${tags.map((t) => `<span class="nv">[${esc(t)}]</span>`).join(" ")}</span></div>`).join("");
+  return `<div class="pv-nv-counts">${counts}</div>${segs}`;
+}
+function clampWithToggle(el, parent, label) {
+  el.classList.add("is-clamped");
+  if (el.scrollHeight <= el.clientHeight + 2) { el.classList.remove("is-clamped"); return; }
+  const more = document.createElement("button");
+  more.className = "pv-more"; more.type = "button"; more.textContent = label;
+  more.addEventListener("click", () => {
+    more.textContent = el.classList.toggle("is-clamped") ? label : "Show less";
+  });
+  parent.appendChild(more);
+}
+function setupPreview(data, sectionId, tabsId, listId) {
+  const section = document.getElementById(sectionId);
+  const tabs = document.getElementById(tabsId);
+  const list = document.getElementById(listId);
+  const render = (view) => renderPreview(data, section, tabs, list, view);
+  tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) render(b.dataset.view); });
+  arrowKeys(tabs, "view", render);
+  // Views without examples get no tab
+  tabs.querySelectorAll("button").forEach((b) => { b.hidden = !data[b.dataset.view].length; });
+  render(["short", "long", "dialogue"].find((v) => data[v].length) || "short");
+}
+setupPreview(PREVIEW, "preview", "pv-tabs", "pv-list");
+setupPreview(INSTRUCT_PREVIEW, "instructions", "ins-tabs", "ins-list");
+setupPreview(NV_PREVIEW, "nv", "nv-tabs", "nv-list");
+
+/* ------------------------------------------------------------------
+   Misc
+   ------------------------------------------------------------------ */
+document.getElementById("copy-bib").addEventListener("click", async (e) => {
+  try { await navigator.clipboard.writeText(document.getElementById("bibtex-text").textContent); e.target.textContent = "Copied"; }
+  catch { e.target.textContent = "Select and copy"; }
+  setTimeout(() => { e.target.textContent = "Copy"; }, 1600);
+});
+const nav = document.querySelector(".nav");
+window.addEventListener("scroll", () => nav.classList.toggle("is-stuck", window.scrollY > 8), { passive: true });
+
+function rerenderAll() {
+  hero = renderScore(heroSvg, heroCfg); paintHero(heroT);
+  renderViews();
+}
+let lastW = window.innerWidth;
+window.addEventListener("resize", debounce(() => {
+  if (window.innerWidth === lastW) return;
+  lastW = window.innerWidth; rerenderAll();
+}, 150));
+// Web fonts change the text metrics used for label collision checks.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(rerenderAll);
+})();
+</script>
+</body>
+</html>
